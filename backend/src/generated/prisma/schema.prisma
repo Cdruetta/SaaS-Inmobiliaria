@@ -1,0 +1,135 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(AGENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  properties   Property[]
+  clients      Client[]
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model Property {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  type        PropertyType
+  status      PropertyStatus @default(AVAILABLE)
+  price       Float
+  address     String
+  city        String
+  state       String
+  zipCode     String?
+  bedrooms    Int?
+  bathrooms   Float?
+  area        Float? // in square meters
+  yearBuilt   Int?
+  features    String? // JSON string of features
+  images      String? // JSON string of image URLs
+
+  // Relations
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("properties")
+}
+
+model Client {
+  id          String  @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  address     String?
+  preferences String? // JSON string of property preferences
+
+  // Relations
+  agentId      String
+  agent        User          @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("clients")
+}
+
+model Transaction {
+  id         String            @id @default(cuid())
+  type       TransactionType
+  status     TransactionStatus @default(PENDING)
+  amount     Float
+  commission Float?
+  notes      String?
+
+  // Relations
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  agentId    String
+  agent      User     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("transactions")
+}
+
+enum Role {
+  ADMIN
+  AGENT
+  MANAGER
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  CONDO
+  TOWNHOUSE
+  LAND
+  COMMERCIAL
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  SOLD
+  RENTED
+  PENDING
+  OFF_MARKET
+}
+
+enum TransactionType {
+  SALE
+  RENTAL
+  LEASE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  IN_PROGRESS
+}
