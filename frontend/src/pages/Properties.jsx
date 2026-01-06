@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { Plus, Edit, Trash2, Eye, Building, MapPin, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, MapPin, DollarSign } from 'lucide-react';
 
 const Properties = () => {
   const [properties, setProperties] = useState([]);
@@ -18,32 +18,47 @@ const Properties = () => {
     status: '',
     minPrice: '',
     maxPrice: '',
-    city: ''
+    city: '',
+    search: '' // Agregamos un campo de búsqueda general
   });
 
-  const fetchProperties = async (page = 1) => {
+  const fetchProperties = useCallback(async (page = 1, currentFilters = filters) => {
     try {
       setLoading(true);
+      setError('');
       const params = new URLSearchParams({
-        page,
-        limit: pagination.limit,
-        ...filters
+        page: page.toString(),
+        limit: pagination.limit.toString(),
       });
 
+      // Agregamos los filtros a los parámetros de la URL
+      for (const key in currentFilters) {
+        if (currentFilters[key] !== '') { // Solo agregar si el valor no está vacío
+          params.append(key, currentFilters[key].toString());
+        }
+      }
+
       const response = await api.get(`/properties?${params}`);
-      setProperties(response.data.properties);
-      setPagination(response.data.pagination);
+      setProperties(response.data.properties || []);
+      setPagination(response.data.pagination || {
+        page: 1,
+        limit: 10,
+        total: 0,
+        pages: 0
+      });
     } catch (error) {
       console.error('Error fetching properties:', error);
       setError('Error al cargar las propiedades');
+      setProperties([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.limit, filters]); // Agregamos filters a las dependencias
 
   useEffect(() => {
-    fetchProperties();
-  }, [filters]);
+    fetchProperties(1, filters); // Cargar propiedades al montar o cuando los filtros cambien
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchProperties, filters]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -53,6 +68,11 @@ const Properties = () => {
     }));
   };
 
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    fetchProperties(1, filters); // Reiniciar a la primera página con los filtros actuales
+  };
+
   const handleDeleteProperty = async (id) => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar esta propiedad?')) {
       return;
@@ -60,7 +80,7 @@ const Properties = () => {
 
     try {
       await api.delete(`/properties/${id}`);
-      fetchProperties(pagination.page); // Recargar la página actual
+      fetchProperties(pagination.page, filters); // Recargar la página actual con los filtros actuales
     } catch (error) {
       console.error('Error deleting property:', error);
       setError('Error al eliminar la propiedad');
@@ -326,14 +346,14 @@ const Properties = () => {
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-6 rounded-lg">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
-              onClick={() => fetchProperties(pagination.page - 1)}
+              onClick={() => fetchProperties(pagination.page - 1, filters)}
               disabled={pagination.page === 1}
               className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Anterior
             </button>
             <button
-              onClick={() => fetchProperties(pagination.page + 1)}
+              onClick={() => fetchProperties(pagination.page + 1, filters)}
               disabled={pagination.page === pagination.pages}
               className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -359,7 +379,7 @@ const Properties = () => {
             <div>
               <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                 <button
-                  onClick={() => fetchProperties(pagination.page - 1)}
+                  onClick={() => fetchProperties(pagination.page - 1, filters)}
                   disabled={pagination.page === 1}
                   className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -372,7 +392,7 @@ const Properties = () => {
                   return (
                     <button
                       key={pageNum}
-                      onClick={() => fetchProperties(pageNum)}
+                      onClick={() => fetchProperties(pageNum, filters)}
                       className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                         pagination.page === pageNum
                           ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
@@ -384,7 +404,7 @@ const Properties = () => {
                   );
                 })}
                 <button
-                  onClick={() => fetchProperties(pagination.page + 1)}
+                  onClick={() => fetchProperties(pagination.page + 1, filters)}
                   disabled={pagination.page === pagination.pages}
                   className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >

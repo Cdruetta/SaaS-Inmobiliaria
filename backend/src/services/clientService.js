@@ -34,13 +34,13 @@ class ClientService {
 
       // If agentId provided, only show clients owned by this agent
       if (agentId) {
-        whereClause += ' AND agentId = ?';
+        whereClause += ' AND c.agentId = ?';
         params.push(agentId);
       }
 
       // Search functionality
       if (search) {
-        whereClause += ' AND (firstName LIKE ? OR lastName LIKE ? OR email LIKE ?)';
+        whereClause += ' AND (c.firstName LIKE ? OR c.lastName LIKE ? OR c.email LIKE ?)';
         const searchTerm = `%${search}%`;
         params.push(searchTerm, searchTerm, searchTerm);
       }
@@ -92,8 +92,8 @@ class ClientService {
       return {
         clients: [],
         pagination: {
-          page: parseInt(page || 1),
-          limit: parseInt(limit || 10),
+          page: parseInt(page),
+          limit: parseInt(limit),
           total: 0,
           pages: 0
         }
