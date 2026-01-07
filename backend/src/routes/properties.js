@@ -19,10 +19,10 @@ router.get('/:id', propertyController.getPropertyById);
 // Create new property
 router.post('/', propertyController.createProperty);
 
-// Update property
+// Update property (owners can update their own properties)
 router.put('/:id', propertyController.updateProperty);
 
-// Delete property (only admins can delete any property)
-router.delete('/:id', authorizeRoles('ADMIN'), propertyController.deleteProperty);
+// Delete property (owners can delete their own properties)
+router.delete('/:id', propertyController.deleteProperty);
 
 module.exports = router;

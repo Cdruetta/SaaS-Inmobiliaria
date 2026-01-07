@@ -6,9 +6,14 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "prod": "node --env-file=.env.production src/server.js",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "DATABASE_URL='file:./prod.db' prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
+    "db:studio:prod": "DATABASE_URL='file:./prod.db' prisma studio",
+    "db:push:prod": "DATABASE_URL='file:./prod.db' prisma db push",
+    "build:prod": "npm run db:migrate:prod && npm run db:generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

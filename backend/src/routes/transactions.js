@@ -19,10 +19,10 @@ router.get('/:id', transactionController.getTransactionById);
 // Create new transaction
 router.post('/', transactionController.createTransaction);
 
-// Update transaction
+// Update transaction (agents can update their own transactions)
 router.put('/:id', transactionController.updateTransaction);
 
-// Delete transaction (only admins can delete any transaction)
-router.delete('/:id', authorizeRoles('ADMIN'), transactionController.deleteTransaction);
+// Delete transaction (agents can delete their own transactions)
+router.delete('/:id', transactionController.deleteTransaction);
 
 module.exports = router;

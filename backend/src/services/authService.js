@@ -1,22 +1,10 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Database = require('better-sqlite3');
+const { PrismaClient } = require('@prisma/client');
 
 class AuthService {
   constructor() {
-    this.db = new Database('./dev.db');
-    // Crear tabla si no existe
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        email TEXT UNIQUE,
-        password TEXT,
-        name TEXT,
-        role TEXT DEFAULT 'AGENT',
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    this.prisma = new PrismaClient();
   }
 
   // Hash password
@@ -38,7 +26,7 @@ class AuthService {
         email: user.email,
         role: user.role
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'fallback-secret',
       { expiresIn: '7d' }
     );
   }
@@ -48,8 +36,9 @@ class AuthService {
     const { email, password, name, role = 'AGENT' } = userData;
 
     // Check if user already exists
-    const existingStmt = this.db.prepare('SELECT id FROM users WHERE email = ?');
-    const existingUser = existingStmt.get(email.toLowerCase().trim());
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() }
+    });
 
     if (existingUser) {
       throw new Error('El usuario ya existe con este email');
@@ -57,23 +46,22 @@ class AuthService {
 
     // Hash password
     const hashedPassword = await this.hashPassword(password);
-    const userId = 'user_' + Date.now();
 
     // Create user
-    const insertStmt = this.db.prepare(`
-      INSERT INTO users (id, email, password, name, role, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const now = new Date().toISOString();
-    insertStmt.run(userId, email.toLowerCase().trim(), hashedPassword, name.trim(), role, now, now);
-
-    const user = {
-      id: userId,
-      email: email.toLowerCase().trim(),
-      name: name.trim(),
-      role: role
-    };
+    const user = await this.prisma.user.create({
+      data: {
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        name: name.trim(),
+        role: role
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true
+      }
+    });
 
     // Generate token
     const token = this.generateToken(user);
@@ -84,8 +72,16 @@ class AuthService {
   // Login user
   async login(email, password) {
     // Find user
-    const stmt = this.db.prepare('SELECT id, email, password, name, role FROM users WHERE email = ?');
-    const user = stmt.get(email.toLowerCase().trim());
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        name: true,
+        role: true
+      }
+    });
 
     if (!user) {
       throw new Error('Credenciales inválidas');
@@ -113,27 +109,45 @@ class AuthService {
 
   // Get user profile
   async getProfile(userId) {
-    const stmt = this.db.prepare('SELECT id, email, name, role, createdAt, updatedAt FROM users WHERE id = ?');
-    const user = stmt.get(userId);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            properties: true,
+            clients: true,
+            transactions: true
+          }
+        }
+      }
+    });
 
     if (!user) {
       throw new Error('Usuario no encontrado');
     }
-
-    // Add counts (simplified for now)
-    user._count = {
-      properties: 0,
-      clients: 0,
-      transactions: 0
-    };
 
     return user;
   }
 
   // Get user by ID
   async getUserById(userId) {
-    const stmt = this.db.prepare('SELECT id, email, name, role, createdAt, updatedAt FROM users WHERE id = ?');
-    const user = stmt.get(userId);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
     return user;
   }
 
@@ -146,7 +160,7 @@ class AuthService {
       hashedPassword = await this.hashPassword(password);
     }
 
-    const user = await prisma.user.update({
+    const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
         ...data,
@@ -165,8 +179,8 @@ class AuthService {
   }
 
   // Close database connection
-  close() {
-    this.db.close();
+  async close() {
+    await this.prisma.$disconnect();
   }
 }
 

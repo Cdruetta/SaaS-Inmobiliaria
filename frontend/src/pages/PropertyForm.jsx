@@ -33,7 +33,22 @@ const PropertyForm = () => {
         setLoading(true);
         try {
           const response = await api.get(`/properties/${id}`);
-          setFormData(response.data);
+          const property = response.data.property;
+          setFormData({
+            title: property.title || '',
+            description: property.description || '',
+            address: property.address || '',
+            city: property.city || '',
+            state: property.state || '',
+            zipCode: property.zipCode || '',
+            price: property.price || '',
+            currency: 'USD',
+            bedrooms: property.bedrooms || '',
+            bathrooms: property.bathrooms || '',
+            area: property.area || '',
+            type: property.type || 'HOUSE',
+            status: property.status || 'AVAILABLE'
+          });
         } catch (err) {
           setError('Error al cargar la propiedad.');
           toast.error('Error al cargar la propiedad.');

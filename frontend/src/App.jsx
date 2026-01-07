@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -11,6 +12,7 @@ import Transactions from './pages/Transactions';
 import TransactionForm from './pages/TransactionForm';
 import Profile from './pages/Profile';
 import Navbar from './components/Navbar';
+import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 // Componente para rutas protegidas
@@ -174,6 +176,20 @@ function App() {
               </ProtectedRoute>
             } />
           </Routes>
+
+          {/* Toast Container Global */}
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
         </div>
       </Router>
     </AuthProvider>

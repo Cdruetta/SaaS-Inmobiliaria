@@ -1,0 +1,309 @@
+import { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import api from '../services/api';
+
+const PropertyForm = ({ propertyId, onSuccess, onCancel }) => {
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [originalData, setOriginalData] = useState(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    type: 'HOUSE',
+    price: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    bedrooms: '',
+    bathrooms: '',
+    area: '',
+    yearBuilt: '',
+    status: 'AVAILABLE'
+  });
+
+  // Cargar datos existentes si es edición
+  useEffect(() => {
+    if (propertyId) {
+      loadProperty();
+    }
+  }, [propertyId]);
+
+  const loadProperty = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/properties/${propertyId}`);
+      const property = response.data.property;
+
+      // Guardar datos originales para comparación
+      setOriginalData(property);
+
+      // Llenar formulario con datos existentes
+      setFormData({
+        title: property.title || '',
+        description: property.description || '',
+        type: property.type || 'HOUSE',
+        price: property.price || '',
+        address: property.address || '',
+        city: property.city || '',
+        state: property.state || '',
+        zipCode: property.zipCode || '',
+        bedrooms: property.bedrooms || '',
+        bathrooms: property.bathrooms || '',
+        area: property.area || '',
+        yearBuilt: property.yearBuilt || '',
+        status: property.status || 'AVAILABLE'
+      });
+    } catch (error) {
+      console.error('Error cargando propiedad:', error);
+      toast.error('Error al cargar la propiedad');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const getChangedFields = () => {
+    if (!originalData) return formData;
+
+    const changes = {};
+    Object.keys(formData).forEach(key => {
+      if (formData[key] !== originalData[key]) {
+        changes[key] = formData[key] || null;
+      }
+    });
+    return changes;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      const dataToSend = propertyId ? getChangedFields() : formData;
+
+      if (propertyId) {
+        await api.put(`/properties/${propertyId}`, dataToSend);
+        toast.success('Propiedad actualizada exitosamente!');
+      } else {
+        await api.post('/properties', dataToSend);
+        toast.success('Propiedad creada exitosamente!');
+      }
+
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error('Error guardando propiedad:', error);
+      toast.error(error.response?.data?.error || 'Error al guardar la propiedad');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2 text-gray-600">Cargando propiedad...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      <table width="100%" border="1" cellPadding="10" cellSpacing="0" style={{ backgroundColor: '#ffffff', borderCollapse: 'collapse' }}>
+        <tr style={{ backgroundColor: '#f0f0f0' }}>
+          <td colspan="2" style={{ fontWeight: 'bold', fontSize: '16px', textAlign: 'center', padding: '15px' }}>
+            {propertyId ? 'EDITAR PROPIEDAD' : 'NUEVA PROPIEDAD'}
+          </td>
+        </tr>
+
+        <form onSubmit={handleSubmit}>
+          <tr style={{ backgroundColor: '#e0e0e0' }}>
+            <td colspan="2" style={{ fontWeight: 'bold', padding: '8px' }}>
+              DATOS DE LA PROPIEDAD
+            </td>
+          </tr>
+
+          <tr>
+            <td width="30%" style={{ fontWeight: 'bold', padding: '8px' }}>
+              Título *
+            </td>
+            <td style={{ padding: '8px' }}>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => handleChange('title', e.target.value)}
+                size="40"
+                placeholder="Título de la propiedad"
+                required
+                style={{ width: '100%', padding: '4px', border: '1px solid #cccccc' }}
+              />
+            </td>
+          </tr>
+
+          <tr>
+            <td style={{ fontWeight: 'bold', padding: '8px' }}>
+              Descripción
+            </td>
+            <td style={{ padding: '8px' }}>
+              <textarea
+                value={formData.description}
+                onChange={(e) => handleChange('description', e.target.value)}
+                rows="3"
+                cols="38"
+                placeholder="Descripción de la propiedad"
+                style={{ width: '100%', padding: '4px', border: '1px solid #cccccc' }}
+              />
+            </td>
+          </tr>
+
+          <tr>
+            <td style={{ fontWeight: 'bold', padding: '8px' }}>
+              Tipo *
+            </td>
+            <td style={{ padding: '8px' }}>
+              <select
+                value={formData.type}
+                onChange={(e) => handleChange('type', e.target.value)}
+                required
+                style={{ width: '100%', padding: '4px', border: '1px solid #cccccc' }}
+              >
+                <option value="HOUSE">Casa</option>
+                <option value="APARTMENT">Apartamento</option>
+                <option value="CONDO">Condominio</option>
+                <option value="LAND">Terreno</option>
+                <option value="COMMERCIAL">Comercial</option>
+              </select>
+            </td>
+          </tr>
+
+          <tr>
+            <td style={{ fontWeight: 'bold', padding: '8px' }}>
+              Precio *
+            </td>
+            <td style={{ padding: '8px' }}>
+              <input
+                type="number"
+                value={formData.price}
+                onChange={(e) => handleChange('price', e.target.value)}
+                size="20"
+                placeholder="Precio"
+                min="0"
+                step="0.01"
+                required
+                style={{ width: '100%', padding: '4px', border: '1px solid #cccccc' }}
+              />
+            </td>
+          </tr>
+
+          <tr style={{ backgroundColor: '#e0e0e0' }}>
+            <td colspan="2" style={{ fontWeight: 'bold', padding: '8px' }}>
+              UBICACIÓN
+            </td>
+          </tr>
+
+          <tr>
+            <td style={{ fontWeight: 'bold', padding: '8px' }}>
+              Dirección *
+            </td>
+            <td style={{ padding: '8px' }}>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => handleChange('address', e.target.value)}
+                size="40"
+                placeholder="Dirección completa"
+                required
+                style={{ width: '100%', padding: '4px', border: '1px solid #cccccc' }}
+              />
+            </td>
+          </tr>
+
+          <tr>
+            <td style={{ fontWeight: 'bold', padding: '8px' }}>
+              Ciudad *
+            </td>
+            <td style={{ padding: '8px' }}>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => handleChange('city', e.target.value)}
+                size="25"
+                placeholder="Ciudad"
+                required
+                style={{ width: '100%', padding: '4px', border: '1px solid #cccccc' }}
+              />
+            </td>
+          </tr>
+
+          <tr>
+            <td style={{ fontWeight: 'bold', padding: '8px' }}>
+              Estado *
+            </td>
+            <td style={{ padding: '8px' }}>
+              <input
+                type="text"
+                value={formData.state}
+                onChange={(e) => handleChange('state', e.target.value)}
+                size="25"
+                placeholder="Estado"
+                required
+                style={{ width: '100%', padding: '4px', border: '1px solid #cccccc' }}
+              />
+            </td>
+          </tr>
+
+          <tr style={{ backgroundColor: '#cccccc' }}>
+            <td colspan="2" align="center" style={{ padding: '15px' }}>
+              <table border="0" cellPadding="0" cellSpacing="10" align="center">
+                <tr>
+                  {onCancel && (
+                    <td>
+                      <button
+                        type="button"
+                        onClick={onCancel}
+                        style={{
+                          backgroundColor: '#666666',
+                          color: 'white',
+                          border: '2px outset #666666',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        CANCELAR
+                      </button>
+                    </td>
+                  )}
+                  <td>
+                    <input
+                      type="submit"
+                      value={saving ? 'GUARDANDO...' : `[${propertyId ? 'ACTUALIZAR' : 'CREAR'}]`}
+                      disabled={saving}
+                      style={{
+                        backgroundColor: saving ? '#666666' : '#0000cc',
+                        color: 'white',
+                        border: saving ? '2px outset #666666' : '2px outset #0000cc',
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        cursor: saving ? 'not-allowed' : 'pointer'
+                      }}
+                    />
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </form>
+      </table>
+    </div>
+  );
+};
+
+export default PropertyForm;

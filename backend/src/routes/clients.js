@@ -19,10 +19,10 @@ router.get('/:id', clientController.getClientById);
 // Create new client
 router.post('/', clientController.createClient);
 
-// Update client
+// Update client (agents can update their own clients)
 router.put('/:id', clientController.updateClient);
 
-// Delete client (only admins can delete any client)
-router.delete('/:id', authorizeRoles('ADMIN'), clientController.deleteClient);
+// Delete client (agents can delete their own clients)
+router.delete('/:id', clientController.deleteClient);
 
 module.exports = router;

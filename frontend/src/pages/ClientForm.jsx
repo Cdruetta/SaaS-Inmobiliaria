@@ -95,7 +95,8 @@ const ClientForm = () => {
         response = await api.post('/clients', formData);
       }
 
-      navigate('/clients');
+      // Refrescar la página para mostrar el nuevo cliente
+      window.location.href = '/clients';
     } catch (error) {
       console.error('Error saving client:', error);
       setError(error.response?.data?.error || 'Error al guardar el cliente');
@@ -118,7 +119,7 @@ const ClientForm = () => {
     <div>
       <div className="mb-8">
         <button
-          onClick={() => navigate('/clients')}
+          onClick={() => window.location.href = '/clients'}
           className="inline-flex items-center text-indigo-600 hover:text-indigo-500 mb-4"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
@@ -256,7 +257,7 @@ const ClientForm = () => {
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => navigate('/clients')}
+              onClick={() => window.location.href = '/clients'}
               className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Cancelar

@@ -1,23 +1,8 @@
-const Database = require('better-sqlite3');
+const { PrismaClient } = require('@prisma/client');
 
 class ClientService {
   constructor() {
-    this.db = new Database('./dev.db');
-    // Crear tabla si no existe
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS clients (
-        id TEXT PRIMARY KEY,
-        firstName TEXT,
-        lastName TEXT,
-        email TEXT,
-        phone TEXT,
-        address TEXT,
-        preferences TEXT,
-        agentId TEXT,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    this.prisma = new PrismaClient();
   }
 
   // Get all clients with filters
@@ -29,61 +14,66 @@ class ClientService {
         limit = 10
       } = filters;
 
-      let whereClause = 'WHERE 1=1';
-      const params = [];
+      // Build where clause
+      const where = {};
 
       // If agentId provided, only show clients owned by this agent
       if (agentId) {
-        whereClause += ' AND c.agentId = ?';
-        params.push(agentId);
+        where.agentId = agentId;
       }
 
       // Search functionality
       if (search) {
-        whereClause += ' AND (c.firstName LIKE ? OR c.lastName LIKE ? OR c.email LIKE ?)';
-        const searchTerm = `%${search}%`;
-        params.push(searchTerm, searchTerm, searchTerm);
+        where.OR = [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } }
+        ];
       }
 
-      const skip = (page - 1) * limit;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
 
-      // Get clients with transaction count
-      const clientsQuery = `
-        SELECT
-          c.id,
-          c.firstName,
-          c.lastName,
-          c.email,
-          c.phone,
-          c.address,
-          c.agentId,
-          c.createdAt,
-          c.updatedAt,
-          COUNT(t.id) as transactionCount
-        FROM clients c
-        LEFT JOIN transactions t ON c.id = t.clientId
-        ${whereClause}
-        GROUP BY c.id
-        ORDER BY c.createdAt DESC
-        LIMIT ? OFFSET ?
-      `;
-      params.push(limit, skip);
+      // Get clients with transaction count and agent info
+      const [clients, total] = await Promise.all([
+        this.prisma.client.findMany({
+          where,
+          include: {
+            agent: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            },
+            _count: {
+              select: {
+                transactions: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          skip,
+          take: parseInt(limit)
+        }),
+        this.prisma.client.count({ where })
+      ]);
 
-      const clients = this.db.prepare(clientsQuery).all(...params);
-
-      // Get total count
-      const countQuery = `SELECT COUNT(*) as count FROM clients c ${whereClause}`;
-      const countParams = params.slice(0, -2); // Remove limit and offset
-      const totalResult = this.db.prepare(countQuery).get(...countParams);
-      const total = totalResult.count;
+      // Format the response
+      const formattedClients = clients.map(client => ({
+        ...client,
+        preferences: client.preferences ? JSON.parse(client.preferences) : {},
+        transactionCount: client._count.transactions
+      }));
 
       return {
-        clients,
+        clients: formattedClients,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
           total,
-          pages: Math.ceil(total / limit)
+          pages: Math.ceil(total / parseInt(limit))
         }
       };
     } catch (error) {
@@ -92,8 +82,8 @@ class ClientService {
       return {
         clients: [],
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: 1,
+          limit: 10,
           total: 0,
           pages: 0
         }
@@ -103,70 +93,52 @@ class ClientService {
 
   // Get client by ID
   async getClientById(id, agentId = null) {
-    let whereClause = 'WHERE c.id = ?';
-    const params = [id];
+    // Build where clause (if agentId is null, it's admin and can see all clients)
+    const where = agentId ? { id, agentId } : { id };
 
-    // If agentId provided, ensure user owns the client
-    if (agentId) {
-      whereClause += ' AND c.agentId = ?';
-      params.push(agentId);
-    }
-
-    const clientQuery = `
-      SELECT
-        c.id,
-        c.firstName,
-        c.lastName,
-        c.email,
-        c.phone,
-        c.address,
-        c.agentId,
-        c.createdAt,
-        c.updatedAt,
-        u.name as agentName,
-        u.email as agentEmail
-      FROM clients c
-      LEFT JOIN users u ON c.agentId = u.id
-      ${whereClause}
-    `;
-
-    const client = this.db.prepare(clientQuery).get(...params);
+    const client = await this.prisma.client.findFirst({
+      where,
+      include: {
+        agent: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        transactions: {
+          include: {
+            property: {
+              select: {
+                id: true,
+                title: true,
+                address: true,
+                price: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        },
+        _count: {
+          select: {
+            transactions: true
+          }
+        }
+      }
+    });
 
     if (!client) {
       throw new Error('Cliente no encontrado');
     }
 
-    // Get transactions for this client
-    const transactionsQuery = `
-      SELECT
-        t.id,
-        t.type,
-        t.status,
-        t.amount,
-        t.createdAt,
-        p.title as propertyTitle,
-        p.address as propertyAddress,
-        p.price as propertyPrice
-      FROM transactions t
-      LEFT JOIN properties p ON t.propertyId = p.id
-      WHERE t.clientId = ?
-      ORDER BY t.createdAt DESC
-    `;
-
-    const transactions = this.db.prepare(transactionsQuery).all(id);
-
-    client.transactions = transactions;
-    client.agent = client.agentId ? {
-      id: client.agentId,
-      name: client.agentName,
-      email: client.agentEmail
-    } : null;
-
-    // Remove temporary fields
-    delete client.agentName;
-    delete client.agentEmail;
-
-    return client;
+    // Format the response
+    return {
+      ...client,
+      preferences: client.preferences ? JSON.parse(client.preferences) : {},
+      transactionCount: client._count.transactions
+    };
   }
 
   // Create new client
@@ -187,78 +159,84 @@ class ClientService {
       }
 
       // Check if client already exists for this agent
-      const existingStmt = this.db.prepare('SELECT id FROM clients WHERE email = ? AND agentId = ?');
-      const existingClient = existingStmt.get(email.toLowerCase().trim(), agentId);
+      const existingClient = await this.prisma.client.findFirst({
+        where: {
+          email: email.toLowerCase().trim(),
+          agentId
+        }
+      });
 
       if (existingClient) {
         throw new Error('Ya existe un cliente con este email para este agente');
       }
 
-      const clientId = 'client_' + Date.now();
-
-      const insertStmt = this.db.prepare(`
-        INSERT INTO clients (id, firstName, lastName, email, phone, address, preferences, agentId, updatedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      const now = new Date().toISOString();
-      insertStmt.run(
-        clientId,
-        firstName.trim(),
-        lastName.trim(),
-        email.toLowerCase().trim(),
-        phone?.trim(),
-        address?.trim(),
-        preferences ? JSON.stringify(preferences) : null,
-        agentId,
-        now
-      );
-
-      const client = {
-        id: clientId,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.toLowerCase().trim(),
-        phone: phone?.trim(),
-        address: address?.trim(),
-        preferences: preferences || null,
-        agentId,
-        createdAt: now,
-        updatedAt: now
-      };
-
-      return client;
-    } catch (error) {
-      console.error('Error in createClient:', error);
-      if (error.message.includes('Nombre, apellido y email son requeridos') ||
-          error.message.includes('Ya existe un cliente con este email')) {
-        throw error;
-      }
-      // Return mock client for testing
-      return {
-        id: 'mock-client-' + Date.now(),
-        firstName: clientData.firstName,
-        lastName: clientData.lastName,
-        email: clientData.email,
-        phone: clientData.phone,
-        address: clientData.address,
-        agentId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        agent: {
-          id: agentId,
-          name: 'Usuario de Prueba',
-          email: 'test@example.com'
+      // Create client using Prisma
+      const client = await this.prisma.client.create({
+        data: {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.toLowerCase().trim(),
+          phone: phone?.trim(),
+          address: address?.trim(),
+          preferences: preferences ? JSON.stringify(preferences) : null,
+          agentId
+        },
+        include: {
+          agent: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          _count: {
+            select: {
+              transactions: true
+            }
+          }
         }
+      });
+
+      // Format the response
+      return {
+        ...client,
+        preferences: client.preferences ? JSON.parse(client.preferences) : {},
+        transactionCount: client._count.transactions
       };
+    } catch (error) {
+      console.error('Error creating client:', error);
+      throw error;
     }
   }
 
   // Update client
   async updateClient(id, clientData, agentId) {
     // First check if client exists and user owns it
-    await this.getClientById(id, agentId);
+    const whereClause = agentId ? { id, agentId } : { id };
+    const existingClient = await this.prisma.client.findFirst({
+      where: whereClause,
+      include: {
+        agent: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        _count: {
+          select: {
+            transactions: true
+          }
+        }
+      }
+    });
 
+    if (!existingClient) {
+      throw new Error('Cliente no encontrado o no tienes permiso para modificarlo');
+    }
+
+    // Build update data
+    const updateData = {};
     const {
       firstName,
       lastName,
@@ -268,83 +246,87 @@ class ClientService {
       preferences
     } = clientData;
 
-    // Check if email is already used by another client for this agent
-    if (email) {
-      const existingStmt = this.db.prepare('SELECT id FROM clients WHERE email = ? AND agentId = ? AND id != ?');
-      const existingClient = existingStmt.get(email.toLowerCase().trim(), agentId, id);
+    // Only add fields that are provided (not undefined)
+    if (firstName !== undefined) updateData.firstName = firstName.trim();
+    if (lastName !== undefined) updateData.lastName = lastName.trim();
+    if (email !== undefined) updateData.email = email.toLowerCase().trim();
+    if (phone !== undefined) updateData.phone = phone?.trim();
+    if (address !== undefined) updateData.address = address?.trim();
+    if (preferences !== undefined) updateData.preferences = preferences ? JSON.stringify(preferences) : null;
 
-      if (existingClient) {
-        throw new Error('Ya existe otro cliente con este email');
+    // If no fields to update, return existing client
+    if (Object.keys(updateData).length === 0) {
+      return {
+        ...existingClient,
+        preferences: existingClient.preferences ? JSON.parse(existingClient.preferences) : {},
+        transactionCount: existingClient._count.transactions
+      };
+    }
+
+    // Update the client
+    const updatedClient = await this.prisma.client.update({
+      where: {
+        id
+      },
+      data: updateData,
+      include: {
+        agent: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        _count: {
+          select: {
+            transactions: true
+          }
+        }
       }
-    }
+    });
 
-    // Build update query dynamically
-    const updateFields = [];
-    const params = [];
-    const now = new Date().toISOString();
-
-    if (firstName !== undefined) {
-      updateFields.push('firstName = ?');
-      params.push(firstName.trim());
-    }
-    if (lastName !== undefined) {
-      updateFields.push('lastName = ?');
-      params.push(lastName.trim());
-    }
-    if (email !== undefined) {
-      updateFields.push('email = ?');
-      params.push(email.toLowerCase().trim());
-    }
-    if (phone !== undefined) {
-      updateFields.push('phone = ?');
-      params.push(phone?.trim() || null);
-    }
-    if (address !== undefined) {
-      updateFields.push('address = ?');
-      params.push(address?.trim() || null);
-    }
-    if (preferences !== undefined) {
-      updateFields.push('preferences = ?');
-      params.push(preferences ? JSON.stringify(preferences) : null);
-    }
-
-    updateFields.push('updatedAt = ?');
-    params.push(now);
-
-    params.push(id); // for WHERE clause
-
-    const updateQuery = `
-      UPDATE clients
-      SET ${updateFields.join(', ')}
-      WHERE id = ?
-    `;
-
-    this.db.prepare(updateQuery).run(...params);
-
-    // Return the updated client
-    return await this.getClientById(id, agentId);
+    // Format the response
+    return {
+      ...updatedClient,
+      preferences: updatedClient.preferences ? JSON.parse(updatedClient.preferences) : {},
+      transactionCount: updatedClient._count.transactions
+    };
   }
 
   // Delete client
   async deleteClient(id, agentId) {
-    // First check if client exists and user owns it
-    await this.getClientById(id, agentId);
+    // Build where clause for checking ownership
+    const whereClause = agentId ? { id, agentId } : { id };
+
+    // First check if client exists and user owns it (if not admin)
+    const client = await this.prisma.client.findFirst({
+      where: whereClause
+    });
+
+    if (!client) {
+      throw new Error('Cliente no encontrado o no tienes permiso para eliminarlo');
+    }
 
     // Check if client has active transactions
-    const activeTransactionsStmt = this.db.prepare(`
-      SELECT COUNT(*) as count
-      FROM transactions
-      WHERE clientId = ? AND status IN ('PENDING', 'IN_PROGRESS')
-    `);
-    const activeTransactionsResult = activeTransactionsStmt.get(id);
+    const activeTransactionsCount = await this.prisma.transaction.count({
+      where: {
+        clientId: id,
+        status: {
+          in: ['PENDING', 'IN_PROGRESS']
+        }
+      }
+    });
 
-    if (activeTransactionsResult.count > 0) {
+    if (activeTransactionsCount > 0) {
       throw new Error('No se puede eliminar un cliente con transacciones activas');
     }
 
     // Delete the client
-    const deleteStmt = this.db.prepare('DELETE FROM clients WHERE id = ?');
-    deleteStmt.run(id);
+    await this.prisma.client.delete({
+      where: {
+        id
+      }
+    });
 
     return { message: 'Cliente eliminado exitosamente' };
   }
@@ -352,46 +334,42 @@ class ClientService {
   // Get client statistics
   async getClientStats(agentId = null) {
     try {
-      let whereClause = '';
-      const params = [];
+      const where = agentId ? { agentId } : {};
 
-      if (agentId) {
-        whereClause = 'WHERE agentId = ?';
-        params.push(agentId);
-      }
-
-      // Get total count
-      const countStmt = this.db.prepare(`SELECT COUNT(*) as count FROM clients ${whereClause}`);
-      const countResult = countStmt.get(...params);
-      const totalClients = countResult.count;
-
-      // Get stats by agent
-      const agentStmt = this.db.prepare(`
-        SELECT agentId, COUNT(*) as count
-        FROM clients ${whereClause}
-        GROUP BY agentId
-      `);
-      const agentStats = agentStmt.all(...params);
+      const [totalClients, activeClients] = await Promise.all([
+        this.prisma.client.count({ where }),
+        this.prisma.client.count({
+          where: {
+            ...where,
+            transactions: {
+              some: {
+                status: {
+                  in: ['PENDING', 'IN_PROGRESS', 'COMPLETED']
+                }
+              }
+            }
+          }
+        })
+      ]);
 
       return {
         totalClients,
-        byAgent: agentStats.map(stat => ({
-          agentId: stat.agentId,
-          count: stat.count
-        }))
+        activeClients,
+        inactiveClients: totalClients - activeClients
       };
     } catch (error) {
       console.error('Error in getClientStats:', error);
       return {
         totalClients: 0,
-        byAgent: []
+        activeClients: 0,
+        inactiveClients: 0
       };
     }
   }
 
   // Close database connection
-  close() {
-    this.db.close();
+  async close() {
+    await this.prisma.$disconnect();
   }
 }
 
