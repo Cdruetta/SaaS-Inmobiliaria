@@ -37,6 +37,15 @@ class PropertyController {
   // Create new property
   async createProperty(req, res) {
     try {
+      // Verificar que el usuario esté autenticado
+      if (!req.user) {
+        return res.status(401).json({ error: 'Usuario no autenticado' });
+      }
+
+      if (!req.user.id) {
+        return res.status(400).json({ error: 'ID de usuario no válido' });
+      }
+
       const propertyData = req.body;
       const ownerId = req.user.id;
 

@@ -34,6 +34,8 @@ model Property {
   type        PropertyType
   status      PropertyStatus @default(AVAILABLE)
   price       Float
+  currency    String?        @default("USD")
+  listingType String?        @default("SALE")
   address     String
   city        String
   state       String

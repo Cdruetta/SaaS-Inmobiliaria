@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const PropertyForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, loading: authLoading, saveRedirectPath } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -21,10 +23,22 @@ const PropertyForm = () => {
     area: '',
     type: 'HOUSE', // Default type
     status: 'AVAILABLE', // Default status
+    listingType: 'SALE', // Nuevo campo: SALE, RENT, SOLD, RENTED_OUT
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+
+  // Verificar autenticación
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast.error('Debes iniciar sesión para crear o editar propiedades');
+      const currentPath = id ? `/properties/${id}/edit` : '/properties/new';
+      saveRedirectPath(currentPath);
+      navigate('/login');
+      return;
+    }
+  }, [user, authLoading, navigate, id, saveRedirectPath]);
 
   useEffect(() => {
     if (id) {
@@ -42,12 +56,13 @@ const PropertyForm = () => {
             state: property.state || '',
             zipCode: property.zipCode || '',
             price: property.price || '',
-            currency: 'USD',
+            currency: property.currency || 'USD',
             bedrooms: property.bedrooms || '',
             bathrooms: property.bathrooms || '',
             area: property.area || '',
             type: property.type || 'HOUSE',
-            status: property.status || 'AVAILABLE'
+            status: property.status || 'AVAILABLE',
+            listingType: property.listingType || 'SALE' // Asumimos SALE por defecto si no existe
           });
         } catch (err) {
           setError('Error al cargar la propiedad.');
@@ -83,13 +98,45 @@ const PropertyForm = () => {
       }
       navigate('/properties');
     } catch (err) {
-      const errorMessage = err.response?.data?.error || 'Error al guardar la propiedad.';
+      let errorMessage = 'Error al guardar la propiedad.';
+
+      if (err.response?.status === 401) {
+        errorMessage = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+        navigate('/login');
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Debes iniciar sesión para acceder a esta página.</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          >
+            Ir al Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && isEditing) {
     return (
@@ -100,7 +147,8 @@ const PropertyForm = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-lg">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl w-full bg-white shadow-md rounded-lg p-6">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">
         {isEditing ? 'Editar Propiedad' : 'Agregar Nueva Propiedad'}
       </h1>
@@ -154,6 +202,23 @@ const PropertyForm = () => {
                 <option value="ARS">ARS</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label htmlFor="listingType" className="block text-sm font-medium text-gray-700">
+              Tipo de Publicación
+            </label>
+            <select
+              name="listingType"
+              id="listingType"
+              value={formData.listingType}
+              onChange={handleChange}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="SALE">Venta</option>
+              <option value="RENT">Alquiler</option>
+              <option value="SOLD">Ya vendida</option>
+              <option value="RENTED_OUT">Ya alquilada</option>
+            </select>
           </div>
           <div className="md:col-span-2">
             <label htmlFor="description" className="block text-sm font-medium text-gray-700">
@@ -279,9 +344,7 @@ const PropertyForm = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="HOUSE">Casa</option>
-              <option value="APARTMENT">Apartamento</option>
-              <option value="CONDO">Condominio</option>
-              <option value="TOWNHOUSE">Casa Adosada</option>
+              <option value="APARTMENT">Departamento</option>
               <option value="LAND">Terreno</option>
               <option value="COMMERCIAL">Comercial</option>
             </select>
@@ -322,6 +385,7 @@ const PropertyForm = () => {
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 };

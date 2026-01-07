@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-// Borrar base de datos existente si existe
+// Verificar si la base de datos ya existe
 const fs = require('fs');
 const path = require('path');
 
@@ -10,20 +10,22 @@ const dbPath = './dev.db';
 const dbWalPath = './dev.db-wal';
 const dbShmPath = './dev.db-shm';
 
-try {
-  if (fs.existsSync(dbPath)) {
-    fs.unlinkSync(dbPath);
-    console.log('Base de datos anterior eliminada');
-  }
-  if (fs.existsSync(dbWalPath)) {
-    fs.unlinkSync(dbWalPath);
-  }
-  if (fs.existsSync(dbShmPath)) {
-    fs.unlinkSync(dbShmPath);
-  }
-} catch (error) {
-  console.log('No se pudo eliminar la base de datos anterior:', error.message);
+const dbExists = fs.existsSync(dbPath);
+
+if (dbExists) {
+  console.log('⚠️  Base de datos existente encontrada');
+  console.log('Para evitar perder datos, este script ahora solo inicializa si la base de datos no existe.');
+  console.log('Si necesitas resetear la base de datos completamente, elimina manualmente el archivo dev.db');
+  console.log('');
+  console.log('Para inicializar una base de datos nueva:');
+  console.log('1. Detén el servidor backend');
+  console.log('2. Elimina el archivo dev.db');
+  console.log('3. Vuelve a ejecutar este script');
+  console.log('');
+  process.exit(0);
 }
+
+console.log('📦 Creando nueva base de datos...');
 
 const db = new Database('./dev.db');
 db.pragma('journal_mode = WAL');
@@ -59,14 +61,15 @@ db.exec(`
   );
 
   -- Tabla de propiedades
-  CREATE TABLE properties (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    description TEXT,
-    type TEXT NOT NULL,
-    status TEXT DEFAULT 'AVAILABLE',
-    price REAL NOT NULL,
-    currency TEXT DEFAULT 'USD',
+         CREATE TABLE properties (
+           id TEXT PRIMARY KEY,
+           title TEXT NOT NULL,
+           description TEXT,
+           type TEXT NOT NULL,
+           status TEXT DEFAULT 'AVAILABLE',
+           price REAL NOT NULL,
+           currency TEXT DEFAULT 'USD',
+           listingType TEXT DEFAULT 'SALE',
     address TEXT NOT NULL,
     city TEXT NOT NULL,
     state TEXT NOT NULL,
@@ -223,7 +226,8 @@ const properties = [
     yearBuilt: 2015,
     features: JSON.stringify(['Cocina equipada', 'Balcón', 'Parking']),
     images: JSON.stringify([]),
-    ownerId: userId
+    ownerId: userId,
+    listingType: 'SALE'
   },
   {
     id: uuidv4(),
@@ -243,7 +247,8 @@ const properties = [
     yearBuilt: 2008,
     features: JSON.stringify(['Jardín', 'Cochera', 'Piscina']),
     images: JSON.stringify([]),
-    ownerId: userId
+    ownerId: userId,
+    listingType: 'SALE'
   },
   {
     id: uuidv4(),
@@ -263,7 +268,8 @@ const properties = [
     yearBuilt: 1995,
     features: JSON.stringify(['Vidriera amplia', 'Aire acondicionado']),
     images: JSON.stringify([]),
-    ownerId: userId
+    ownerId: userId,
+    listingType: 'SALE'
   },
   {
     id: uuidv4(),
@@ -283,7 +289,8 @@ const properties = [
     yearBuilt: 2010,
     features: JSON.stringify(['Terraza', 'Laundry', 'Seguridad 24hs']),
     images: JSON.stringify([]),
-    ownerId: userId
+    ownerId: userId,
+    listingType: 'SALE'
   },
   {
     id: uuidv4(),
@@ -303,13 +310,14 @@ const properties = [
     yearBuilt: null,
     features: JSON.stringify(['Servicios', 'Cerca de ruta']),
     images: JSON.stringify([]),
-    ownerId: userId
+    ownerId: userId,
+    listingType: 'SALE'
   }
 ];
 
 const propertyStmt = db.prepare(`
-  INSERT INTO properties (id, title, description, type, status, price, currency, address, city, state, zipCode, bedrooms, bathrooms, area, yearBuilt, features, images, ownerId, updatedAt)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO properties (id, title, description, type, status, price, currency, address, city, state, zipCode, bedrooms, bathrooms, area, yearBuilt, features, images, ownerId, listingType, updatedAt)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 properties.forEach(property => {
@@ -332,6 +340,7 @@ properties.forEach(property => {
     property.features,
     property.images,
     property.ownerId,
+    property.listingType,
     now
   );
 });

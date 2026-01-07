@@ -39,6 +39,15 @@ class ClientController {
   // Create new client
   async createClient(req, res) {
     try {
+      // Verificar que el usuario esté autenticado
+      if (!req.user) {
+        return res.status(401).json({ error: 'Usuario no autenticado' });
+      }
+
+      if (!req.user.id) {
+        return res.status(400).json({ error: 'ID de usuario no válido' });
+      }
+
       const clientData = req.body;
       const agentId = req.user.id;
 

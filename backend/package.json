@@ -13,6 +13,9 @@
     "db:studio": "prisma studio",
     "db:studio:prod": "DATABASE_URL='file:./prod.db' prisma studio",
     "db:push:prod": "DATABASE_URL='file:./prod.db' prisma db push",
+    "db:backup": "node backup-database.js",
+    "db:reset": "node reset-database.js",
+    "db:setup": "node setup-database.js",
     "build:prod": "npm run db:migrate:prod && npm run db:generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

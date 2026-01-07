@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { Plus, Edit, Trash2, Building, MapPin, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, Building2, Home, MapPin, DollarSign } from 'lucide-react';
 
 const Properties = () => {
   const [properties, setProperties] = useState([]);
@@ -16,6 +16,7 @@ const Properties = () => {
   const [filters, setFilters] = useState({
     type: '',
     status: '',
+    listingType: '',
     minPrice: '',
     maxPrice: '',
     city: '',
@@ -90,15 +91,15 @@ const Properties = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'AVAILABLE':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 border-green-200';
       case 'SOLD':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'RENTED':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -111,7 +112,7 @@ const Properties = () => {
       case 'RENTED':
         return 'Alquilada';
       case 'PENDING':
-        return 'Pendiente';
+        return 'En proceso';
       default:
         return status;
     }
@@ -122,17 +123,68 @@ const Properties = () => {
       case 'HOUSE':
         return 'Casa';
       case 'APARTMENT':
-        return 'Apartamento';
-      case 'CONDO':
-        return 'Condominio';
-      case 'TOWNHOUSE':
-        return 'Casa Adosada';
+        return 'Departamento';
       case 'LAND':
         return 'Terreno';
       case 'COMMERCIAL':
         return 'Comercial';
       default:
         return type;
+    }
+  };
+
+  const getTransactionType = (property) => {
+    if (property.listingType === 'RENT') {
+      return 'Alquiler';
+    } else if (property.listingType === 'SALE') {
+      return 'Venta';
+    } else if (property.listingType === 'SOLD') {
+      return 'Ya vendida';
+    } else if (property.listingType === 'RENTED_OUT') {
+      return 'Ya alquilada';
+    } else {
+      // Fallback to status-based logic for backward compatibility
+      switch (property.status) {
+        case 'RENTED':
+          return 'Alquiler';
+        default:
+          return 'Venta';
+      }
+    }
+  };
+
+  const getPropertyStatusLabel = (property) => {
+    // Lógica principal basada en listingType
+    if (property.listingType === 'SOLD') {
+      return { text: 'Ya vendida', color: 'bg-red-100 text-red-800 border-red-200' };
+    } else if (property.listingType === 'RENTED_OUT') {
+      return { text: 'Ya alquilada', color: 'bg-blue-100 text-blue-800 border-blue-200' };
+    } else if (property.listingType === 'SALE' && property.status === 'AVAILABLE') {
+      return { text: 'Disponible para venta', color: 'bg-green-100 text-green-800 border-green-200' };
+    } else if (property.listingType === 'RENT' && property.status === 'AVAILABLE') {
+      return { text: 'Disponible para alquiler', color: 'bg-green-100 text-green-800 border-green-200' };
+    } else if (property.listingType === 'SALE' && property.status === 'PENDING') {
+      return { text: 'En proceso de venta', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+    } else if (property.listingType === 'RENT' && property.status === 'PENDING') {
+      return { text: 'En proceso de alquiler', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+    }
+
+    // Fallback para casos no contemplados
+    return { text: getStatusText(property.status), color: getStatusColor(property.status) };
+  };
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'HOUSE':
+        return <Home className="h-6 w-6 text-gray-600" />;
+      case 'APARTMENT':
+        return <Building2 className="h-6 w-6 text-gray-600" />;
+      case 'LAND':
+        return <MapPin className="h-6 w-6 text-gray-600" />;
+      case 'COMMERCIAL':
+        return <Building className="h-6 w-6 text-gray-600" />;
+      default:
+        return <Building className="h-6 w-6 text-gray-600" />;
     }
   };
 
@@ -178,9 +230,7 @@ const Properties = () => {
             >
               <option value="">Todos</option>
               <option value="HOUSE">Casa</option>
-              <option value="APARTMENT">Apartamento</option>
-              <option value="CONDO">Condominio</option>
-              <option value="TOWNHOUSE">Casa Adosada</option>
+              <option value="APARTMENT">Departamento</option>
               <option value="LAND">Terreno</option>
               <option value="COMMERCIAL">Comercial</option>
             </select>
@@ -200,6 +250,23 @@ const Properties = () => {
               <option value="SOLD">Vendida</option>
               <option value="RENTED">Alquilada</option>
               <option value="PENDING">Pendiente</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo de Publicación
+            </label>
+            <select
+              name="listingType"
+              value={filters.listingType}
+              onChange={handleFilterChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Todos</option>
+              <option value="SALE">Venta</option>
+              <option value="RENT">Alquiler</option>
+              <option value="SOLD">Ya vendida</option>
+              <option value="RENTED_OUT">Ya alquilada</option>
             </select>
           </div>
           <div>
@@ -279,7 +346,7 @@ const Properties = () => {
                   <div className="flex items-center flex-1">
                     <div className="flex-shrink-0">
                       <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Building className="h-6 w-6 text-gray-600" />
+                        {getTypeIcon(property.type)}
                       </div>
                     </div>
                     <div className="ml-4 flex-1">
@@ -296,9 +363,14 @@ const Properties = () => {
                             <span className="text-sm text-gray-600">
                               {getTypeText(property.type)}
                             </span>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(property.status)}`}>
-                              {getStatusText(property.status)}
-                            </span>
+                            {(() => {
+                              const statusInfo = getPropertyStatusLabel(property);
+                              return (
+                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${statusInfo.color}`}>
+                                  {statusInfo.text}
+                                </span>
+                              );
+                            })()}
                             {property.bedrooms && (
                               <span className="text-sm text-gray-600">
                                 {property.bedrooms} hab
@@ -316,6 +388,11 @@ const Properties = () => {
                             <DollarSign className="h-5 w-5 mr-1" />
                             {property.price.toLocaleString()}
                           </div>
+                          {property.currency && (
+                            <div className="text-sm text-gray-500 mt-1">
+                              {property.currency === 'USD' ? 'USD' : 'ARS'}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -159,7 +159,8 @@ const TransactionForm = ({ transactionId, onSuccess, onCancel }) => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl w-full bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6">
         {transactionId ? 'Editar Transacción' : 'Nueva Transacción'}
       </h2>
@@ -318,6 +319,7 @@ const TransactionForm = ({ transactionId, onSuccess, onCancel }) => {
           )}
         </div>
       </form>
+      </div>
     </div>
   );
 };

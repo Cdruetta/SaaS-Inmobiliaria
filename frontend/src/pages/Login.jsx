@@ -12,7 +12,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, getRedirectPath } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -33,7 +33,8 @@ const Login = () => {
       const result = await login(formData.email, formData.password);
 
       if (result.success) {
-        navigate('/dashboard');
+        const redirectPath = getRedirectPath();
+        navigate(redirectPath || '/dashboard');
       } else {
         setError(result.error);
       }

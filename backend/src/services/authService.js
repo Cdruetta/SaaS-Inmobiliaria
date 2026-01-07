@@ -1,10 +1,11 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const Database = require('better-sqlite3');
+const path = require('path');
 
 class AuthService {
   constructor() {
-    this.prisma = new PrismaClient();
+    this.db = new Database(path.join(__dirname, '../../dev.db'));
   }
 
   // Hash password
@@ -34,11 +35,11 @@ class AuthService {
   // Register new user
   async register(userData) {
     const { email, password, name, role = 'AGENT' } = userData;
+    const { v4: uuidv4 } = require('uuid');
 
     // Check if user already exists
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() }
-    });
+    const checkStmt = this.db.prepare('SELECT id FROM users WHERE email = ?');
+    const existingUser = checkStmt.get(email.toLowerCase().trim());
 
     if (existingUser) {
       throw new Error('El usuario ya existe con este email');
@@ -46,22 +47,31 @@ class AuthService {
 
     // Hash password
     const hashedPassword = await this.hashPassword(password);
+    const now = new Date().toISOString();
 
     // Create user
-    const user = await this.prisma.user.create({
-      data: {
-        email: email.toLowerCase().trim(),
-        password: hashedPassword,
-        name: name.trim(),
-        role: role
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true
-      }
-    });
+    const insertStmt = this.db.prepare(`
+      INSERT INTO users (id, email, password, name, role, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const userId = uuidv4();
+    insertStmt.run(
+      userId,
+      email.toLowerCase().trim(),
+      hashedPassword,
+      name.trim(),
+      role,
+      now,
+      now
+    );
+
+    const user = {
+      id: userId,
+      email: email.toLowerCase().trim(),
+      name: name.trim(),
+      role: role
+    };
 
     // Generate token
     const token = this.generateToken(user);
@@ -72,16 +82,13 @@ class AuthService {
   // Login user
   async login(email, password) {
     // Find user
-    const user = await this.prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-      select: {
-        id: true,
-        email: true,
-        password: true,
-        name: true,
-        role: true
-      }
-    });
+    const stmt = this.db.prepare(`
+      SELECT id, email, password, name, role
+      FROM users
+      WHERE email = ?
+    `);
+
+    const user = stmt.get(email.toLowerCase().trim());
 
     if (!user) {
       throw new Error('Credenciales inválidas');
@@ -137,17 +144,13 @@ class AuthService {
 
   // Get user by ID
   async getUserById(userId) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    });
+    const stmt = this.db.prepare(`
+      SELECT id, email, name, role, createdAt, updatedAt
+      FROM users
+      WHERE id = ?
+    `);
+
+    const user = stmt.get(userId);
     return user;
   }
 

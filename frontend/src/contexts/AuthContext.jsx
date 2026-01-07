@@ -14,6 +14,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [redirectPath, setRedirectPath] = useState(null);
 
   // Verificar si hay un token guardado al cargar la aplicación
   useEffect(() => {
@@ -21,7 +22,14 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem('user');
 
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        const userData = JSON.parse(savedUser);
+        setUser(userData);
+      } catch (error) {
+        console.error('AuthContext: Error al parsear usuario guardado', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
@@ -37,12 +45,27 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
+      console.error('AuthContext: Error en login', error.response?.data);
       return {
         success: false,
         error: error.response?.data?.error || 'Error al iniciar sesión'
       };
     }
   }, []);
+
+  const saveRedirectPath = useCallback((path) => {
+    setRedirectPath(path);
+    sessionStorage.setItem('redirectPath', path);
+  }, []);
+
+  const getRedirectPath = useCallback(() => {
+    const savedPath = sessionStorage.getItem('redirectPath');
+    if (savedPath) {
+      sessionStorage.removeItem('redirectPath');
+      return savedPath;
+    }
+    return redirectPath;
+  }, [redirectPath]);
 
   const register = useCallback(async (userData) => {
     try {
@@ -92,8 +115,10 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     isAuthenticated: !!user,
-    loading
-  }), [user, loading, login, register, logout, updateProfile]);
+    loading,
+    saveRedirectPath,
+    getRedirectPath
+  }), [user, loading, login, register, logout, updateProfile, saveRedirectPath, getRedirectPath]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
-import { ArrowLeft, Save, User, Mail, Phone, MapPin } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 const ClientForm = () => {
   const navigate = useNavigate();
@@ -95,8 +95,8 @@ const ClientForm = () => {
         response = await api.post('/clients', formData);
       }
 
-      // Refrescar la página para mostrar el nuevo cliente
-      window.location.href = '/clients';
+      // Redirigir a la lista de clientes usando React Router
+      navigate('/clients');
     } catch (error) {
       console.error('Error saving client:', error);
       setError(error.response?.data?.error || 'Error al guardar el cliente');
@@ -116,162 +116,130 @@ const ClientForm = () => {
   }
 
   return (
-    <div>
-      <div className="mb-8">
-        <button
-          onClick={() => window.location.href = '/clients'}
-          className="inline-flex items-center text-indigo-600 hover:text-indigo-500 mb-4"
-        >
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          Volver a Clientes
-        </button>
-        <h1 className="text-3xl font-bold text-gray-900">
-          {isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
-        </h1>
-        <p className="mt-2 text-gray-600">
-          {isEditing ? 'Modifica la información del cliente' : 'Agrega un nuevo cliente a tu base de datos'}
-        </p>
-      </div>
-
-      <div className="max-w-2xl">
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="max-w-2xl mx-auto">
+      <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+          <div className="mb-4">
+            <button
+              onClick={() => window.location.href = '/clients'}
+              className="inline-flex items-center text-indigo-600 hover:text-indigo-500 mb-4"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Volver a Clientes
+            </button>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            {isEditing ? 'Modifica la información del cliente' : 'Agrega un nuevo cliente a tu base de datos'}
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
               {error}
             </div>
           )}
-
-          <div className="bg-white shadow rounded-lg p-6">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               {/* Nombre */}
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
                   Nombre *
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Juan"
-                    required
-                  />
-                </div>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Nombre del cliente"
+                  required
+                />
               </div>
 
               {/* Apellido */}
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
                   Apellido *
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Pérez"
-                    required
-                  />
-                </div>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Apellido del cliente"
+                  required
+                />
               </div>
 
               {/* Email */}
               <div className="sm:col-span-2">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Correo Electrónico *
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="juan.perez@email.com"
-                    required
-                  />
-                </div>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="cliente@email.com"
+                  required
+                />
               </div>
 
               {/* Teléfono */}
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                   Teléfono
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="+54 11 1234-5678"
-                  />
-                </div>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="+54 11 1234-5678"
+                />
               </div>
 
               {/* Dirección */}
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
                   Dirección
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Av. Corrientes 1234, Buenos Aires"
-                  />
-                </div>
+                <textarea
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Dirección completa del cliente"
+                />
               </div>
             </div>
-          </div>
 
-          {/* Botones */}
-          <div className="flex justify-end space-x-4">
+            {/* Botones */}
+          <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={() => window.location.href = '/clients'}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
-              {saving ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
               {saving ? 'Guardando...' : 'Guardar Cliente'}
             </button>
           </div>
