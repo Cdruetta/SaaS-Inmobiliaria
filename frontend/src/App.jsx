@@ -10,7 +10,6 @@ import ClientForm from './pages/ClientForm';
 import Transactions from './pages/Transactions';
 import TransactionForm from './pages/TransactionForm';
 import Profile from './pages/Profile';
-import AuthCard from './components/AuthCard';
 import Sidebar from './components/Sidebar';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
