@@ -14,15 +14,16 @@ import {
 } from 'lucide-react';
 import './Sidebar.css';
 
-const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(true);
+const Sidebar = ({ isOpen = true, onClose }) => {
   const [activeMenus, setActiveMenus] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
 
   const toggleSidebar = () => {
-    setIsOpen(!isOpen);
+    if (onClose) {
+      onClose();
+    }
   };
 
   const toggleSubMenu = (menuKey) => {
@@ -53,7 +54,7 @@ const Sidebar = () => {
           className="sidebar-toggle"
           onClick={toggleSidebar}
         >
-          {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <X className="h-5 w-5" />
         </button>
         <div className="sidebar-logo">
           <span className="text-lg font-semibold text-gray-900">InmoApp</span>

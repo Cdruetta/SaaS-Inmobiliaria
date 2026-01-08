@@ -21,7 +21,16 @@ const ProtectedLayout = ({ children, title }) => {
 
   return (
     <div className="flex">
-      <Sidebar />
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
       <main className="flex-1 lg:ml-72 p-6 bg-gray-50 min-h-screen">
         {/* Mobile header */}
         <div className="lg:hidden flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
@@ -37,16 +46,6 @@ const ProtectedLayout = ({ children, title }) => {
 
         {children}
       </main>
-
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setSidebarOpen(false)} />
-          <div className="relative">
-            <Sidebar />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
