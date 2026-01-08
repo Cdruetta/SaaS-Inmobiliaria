@@ -14,7 +14,7 @@
   border-radius: 16px;
   padding: 0 16px;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(248, 250, 252, 0.9);
+  background: rgba(241, 245, 249, 0.95);
   backdrop-filter: blur(20px);
   transition: width 0.4s, left 0.4s;
   z-index: 1000;
