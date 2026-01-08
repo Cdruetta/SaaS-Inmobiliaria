@@ -13,8 +13,8 @@
   width: 260px;
   border-radius: 16px;
   padding: 0 16px;
-  border: 1px solid rgb(255 255 255 / 30%);
-  background: rgb(255 255 255 / 95%);
+  border: 1px solid rgb(255 255 255 / 25%);
+  background: rgb(248 250 252 / 90%);
   backdrop-filter: blur(20px);
   transition: width 0.4s, left 0.4s;
   z-index: 1000;
