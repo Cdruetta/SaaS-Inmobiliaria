@@ -11,7 +11,7 @@ import ClientForm from './pages/ClientForm';
 import Transactions from './pages/Transactions';
 import TransactionForm from './pages/TransactionForm';
 import Profile from './pages/Profile';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
@@ -67,9 +67,9 @@ function App() {
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <Dashboard />
                   </main>
                 </div>
@@ -77,9 +77,9 @@ function App() {
             } />
             <Route path="/properties" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <Properties />
                   </main>
                 </div>
@@ -87,9 +87,9 @@ function App() {
             } />
             <Route path="/properties/new" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <PropertyForm />
                   </main>
                 </div>
@@ -97,9 +97,9 @@ function App() {
             } />
             <Route path="/properties/:id/edit" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <PropertyForm />
                   </main>
                 </div>
@@ -107,9 +107,9 @@ function App() {
             } />
             <Route path="/clients" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <Clients />
                   </main>
                 </div>
@@ -117,9 +117,9 @@ function App() {
             } />
             <Route path="/clients/new" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <ClientForm />
                   </main>
                 </div>
@@ -127,9 +127,9 @@ function App() {
             } />
             <Route path="/clients/:id/edit" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <ClientForm />
                   </main>
                 </div>
@@ -137,9 +137,9 @@ function App() {
             } />
             <Route path="/transactions" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <Transactions />
                   </main>
                 </div>
@@ -147,9 +147,9 @@ function App() {
             } />
             <Route path="/transactions/new" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <TransactionForm />
                   </main>
                 </div>
@@ -157,9 +157,9 @@ function App() {
             } />
             <Route path="/transactions/:id/edit" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <TransactionForm />
                   </main>
                 </div>
@@ -167,9 +167,9 @@ function App() {
             } />
             <Route path="/profile" element={
               <ProtectedRoute>
-                <div>
-                  <Navbar />
-                  <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div className="flex">
+                  <Sidebar />
+                  <main className="flex-1 ml-72 p-6 bg-gray-50 min-h-screen">
                     <Profile />
                   </main>
                 </div>

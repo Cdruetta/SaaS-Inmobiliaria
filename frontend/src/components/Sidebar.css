@@ -1,0 +1,227 @@
+* {
+  box-sizing: border-box;
+}
+
+.sidebar {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 260px;
+  border-radius: 16px;
+  padding: 0 16px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(0 0 0 / 40%);
+  backdrop-filter: blur(20px);
+  transition: width 0.4s, left 0.4s;
+  z-index: 1000;
+}
+
+.sidebar-closed {
+  width: 72px;
+  left: 24px;
+}
+
+.sidebar header {
+  display: flex;
+  align-items: center;
+  height: 72px;
+  padding: 0 1.25rem 0 0;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.sidebar header .sidebar-burger {
+  width: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(255 255 255 / 95%);
+  font-size: 20px;
+}
+
+.sidebar .logo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(255 255 255 / 95%);
+  font-weight: 600;
+  font-size: 18px;
+  margin-left: 8px;
+}
+
+.sidebar-closed .logo {
+  display: none;
+}
+
+.sidebar button {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  height: 50px;
+  width: 100%;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  padding: 0 12px 0 16px;
+  color: rgb(255 255 255 / 95%);
+  transition: all 0.3s ease;
+}
+
+.sidebar-closed button {
+  padding: 0 12px;
+  justify-content: center;
+}
+
+.sidebar-closed button p {
+  display: none;
+}
+
+.sidebar-closed button .ai-chevron-down-small {
+  display: none;
+}
+
+.sidebar button p:nth-child(2) {
+  flex: 1 1 auto;
+}
+
+.sidebar button:is(.active, :hover) {
+  background: rgb(0 0 0 / 30%);
+}
+
+.sidebar button i {
+  transition: 0.3s;
+  font-size: 20px;
+  width: 20px;
+  max-width: 20px;
+  min-width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar button.active > i:nth-child(3) {
+  rotate: -180deg;
+}
+
+.sidebar button:not(.active):hover {
+  background: rgb(0 0 0 / 10%);
+}
+
+.sidebar ul {
+  display: grid;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.sub-menu {
+  position: relative;
+  overflow: hidden;
+  height: 0;
+  transition: height 0.5s ease;
+}
+
+.sub-menu.open {
+  height: auto;
+}
+
+.sub-menu ul {
+  position: relative;
+  top: 0;
+  left: 0;
+  display: grid;
+}
+
+.sub-menu button {
+  padding-left: 52px;
+  height: 40px;
+  font-size: 14px;
+}
+
+.sidebar-closed .sub-menu {
+  display: none;
+}
+
+.sub-menu button::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 24px;
+  translate: 0 -50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: rgb(255 255 255 / 35%);
+}
+
+.sub-menu button:hover::before {
+  background-color: rgb(255 255 255 / 60%);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .sidebar {
+    left: -260px;
+    width: 260px;
+  }
+
+  .sidebar-closed {
+    left: -260px;
+    width: 260px;
+  }
+
+  .sidebar.sidebar-mobile-open {
+    left: 24px;
+  }
+}
+
+/* Icon fonts - Using Unicode symbols as fallback */
+.sidebar button i::before {
+  display: inline-block;
+  font-family: 'Akar Icons';
+  font-size: inherit;
+}
+
+/* Fallback icons using Unicode */
+.ai-three-line-horizontal::before { content: "☰"; }
+.ai-home-alt1::before { content: "🏠"; }
+.ai-shipping-box-v1::before { content: "📦"; }
+.ai-person::before { content: "👤"; }
+.ai-cart::before { content: "🛒"; }
+.ai-lock-on::before { content: "🔒"; }
+.ai-log-out::before { content: "🚪"; }
+.ai-chevron-down-small::before { content: "▼"; }
+
+/* Animation for smooth transitions */
+.sidebar button.active {
+  background: rgb(59 130 246 / 0.2);
+  color: rgb(255 255 255);
+}
+
+.sidebar button.active i:first-child {
+  color: rgb(59 130 246);
+}
+
+/* Submenu animation */
+.sub-menu ul {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
