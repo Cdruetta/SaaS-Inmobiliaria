@@ -1,29 +1,17 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import {
-  Home,
-  Building,
-  Users,
-  FileText,
-  User,
-  LogOut,
-  ChevronDown,
-  Menu,
-  X
-} from 'lucide-react';
 import './Sidebar.css';
 
-const Sidebar = ({ isOpen = true, onClose }) => {
+const Sidebar = () => {
+  const [isOpen, setIsOpen] = useState(true);
   const [activeMenus, setActiveMenus] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
 
   const toggleSidebar = () => {
-    if (onClose) {
-      onClose();
-    }
+    setIsOpen(!isOpen);
   };
 
   const toggleSubMenu = (menuKey) => {
@@ -48,131 +36,153 @@ const Sidebar = ({ isOpen = true, onClose }) => {
 
   return (
     <aside className={`sidebar ${isOpen ? '' : 'sidebar-closed'}`}>
-      <header className="sidebar-header">
+      <header>
         <button
           type="button"
-          className="sidebar-toggle"
+          className="sidebar-burger"
           onClick={toggleSidebar}
         >
-          <X className="h-5 w-5" />
+          <i className="ai-three-line-horizontal"></i>
         </button>
-        <div className="sidebar-logo">
-          <span className="text-lg font-semibold text-gray-900">InmoApp</span>
+        <div className="logo">
+          <span>InmoApp</span>
         </div>
       </header>
+      <ul>
+        <li>
+          <button
+            type="button"
+            onClick={() => handleNavigation('/dashboard')}
+            className={isActive('/dashboard') ? 'active' : ''}
+          >
+            <i className="ai-home-alt1"></i>
+            <p>Dashboard</p>
+          </button>
+        </li>
 
-      <nav className="sidebar-nav">
-        <button
-          type="button"
-          onClick={() => handleNavigation('/dashboard')}
-          className={`sidebar-item ${isActive('/dashboard') ? 'active' : ''}`}
-        >
-          <Home className="h-5 w-5" />
-          <span>Dashboard</span>
-        </button>
-
-        <div className="sidebar-group">
+        <li>
           <button
             type="button"
             onClick={() => toggleSubMenu('properties')}
-            className={`sidebar-item ${activeMenus.properties ? 'active' : ''}`}
+            className={activeMenus.properties ? 'active' : ''}
           >
-            <Building className="h-5 w-5" />
-            <span>Propiedades</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${activeMenus.properties ? 'rotate-180' : ''}`} />
+            <i className="ai-shipping-box-v1"></i>
+            <p>Propiedades</p>
+            <i className="ai-chevron-down-small"></i>
           </button>
-          <div className={`sidebar-submenu ${activeMenus.properties ? 'open' : ''}`}>
-            <button
-              type="button"
-              onClick={() => handleNavigation('/properties')}
-              className={`sidebar-submenu-item ${isActive('/properties') ? 'active' : ''}`}
-            >
-              Ver Todas
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNavigation('/properties/new')}
-              className={`sidebar-submenu-item ${isActive('/properties/new') ? 'active' : ''}`}
-            >
-              Nueva Propiedad
-            </button>
+          <div className={`sub-menu ${activeMenus.properties ? 'open' : ''}`}>
+            <ul>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('/properties')}
+                  className={isActive('/properties') ? 'active' : ''}
+                >
+                  Ver Todas
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('/properties/new')}
+                  className={isActive('/properties/new') ? 'active' : ''}
+                >
+                  Nueva Propiedad
+                </button>
+              </li>
+            </ul>
           </div>
-        </div>
+        </li>
 
-        <div className="sidebar-group">
+        <li>
           <button
             type="button"
             onClick={() => toggleSubMenu('clients')}
-            className={`sidebar-item ${activeMenus.clients ? 'active' : ''}`}
+            className={activeMenus.clients ? 'active' : ''}
           >
-            <Users className="h-5 w-5" />
-            <span>Clientes</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${activeMenus.clients ? 'rotate-180' : ''}`} />
+            <i className="ai-person"></i>
+            <p>Clientes</p>
+            <i className="ai-chevron-down-small"></i>
           </button>
-          <div className={`sidebar-submenu ${activeMenus.clients ? 'open' : ''}`}>
-            <button
-              type="button"
-              onClick={() => handleNavigation('/clients')}
-              className={`sidebar-submenu-item ${isActive('/clients') ? 'active' : ''}`}
-            >
-              Ver Todos
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNavigation('/clients/new')}
-              className={`sidebar-submenu-item ${isActive('/clients/new') ? 'active' : ''}`}
-            >
-              Nuevo Cliente
-            </button>
+          <div className={`sub-menu ${activeMenus.clients ? 'open' : ''}`}>
+            <ul>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('/clients')}
+                  className={isActive('/clients') ? 'active' : ''}
+                >
+                  Ver Todos
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('/clients/new')}
+                  className={isActive('/clients/new') ? 'active' : ''}
+                >
+                  Nuevo Cliente
+                </button>
+              </li>
+            </ul>
           </div>
-        </div>
+        </li>
 
-        <div className="sidebar-group">
+        <li>
           <button
             type="button"
             onClick={() => toggleSubMenu('transactions')}
-            className={`sidebar-item ${activeMenus.transactions ? 'active' : ''}`}
+            className={activeMenus.transactions ? 'active' : ''}
           >
-            <FileText className="h-5 w-5" />
-            <span>Transacciones</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${activeMenus.transactions ? 'rotate-180' : ''}`} />
+            <i className="ai-cart"></i>
+            <p>Transacciones</p>
+            <i className="ai-chevron-down-small"></i>
           </button>
-          <div className={`sidebar-submenu ${activeMenus.transactions ? 'open' : ''}`}>
-            <button
-              type="button"
-              onClick={() => handleNavigation('/transactions')}
-              className={`sidebar-submenu-item ${isActive('/transactions') ? 'active' : ''}`}
-            >
-              Ver Todas
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNavigation('/transactions/new')}
-              className={`sidebar-submenu-item ${isActive('/transactions/new') ? 'active' : ''}`}
-            >
-              Nueva Transacción
-            </button>
+          <div className={`sub-menu ${activeMenus.transactions ? 'open' : ''}`}>
+            <ul>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('/transactions')}
+                  className={isActive('/transactions') ? 'active' : ''}
+                >
+                  Ver Todas
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavigation('/transactions/new')}
+                  className={isActive('/transactions/new') ? 'active' : ''}
+                >
+                  Nueva Transacción
+                </button>
+              </li>
+            </ul>
           </div>
-        </div>
+        </li>
 
-        <button
-          type="button"
-          onClick={() => handleNavigation('/profile')}
-          className={`sidebar-item ${isActive('/profile') ? 'active' : ''}`}
-        >
-          <User className="h-5 w-5" />
-          <span>Perfil</span>
-        </button>
+        <li>
+          <button
+            type="button"
+            onClick={() => handleNavigation('/profile')}
+            className={isActive('/profile') ? 'active' : ''}
+          >
+            <i className="ai-lock-on"></i>
+            <p>Perfil</p>
+          </button>
+        </li>
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="sidebar-item text-red-600 hover:text-red-700 hover:bg-red-50"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>Cerrar Sesión</span>
-        </button>
-      </nav>
+        <li>
+          <button
+            type="button"
+            onClick={handleLogout}
+          >
+            <i className="ai-log-out"></i>
+            <p>Cerrar Sesión</p>
+          </button>
+        </li>
+      </ul>
     </aside>
   );
 };

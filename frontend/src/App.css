@@ -1,11 +1,22 @@
 body {
   margin: 0;
-  background-color: #f9fafb;
+  background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: 50%;
   min-height: 100vh;
+  overflow-x: hidden;
   font-family: 'Poppins', sans-serif;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  body {
+    background-attachment: fixed;
+  }
 }
