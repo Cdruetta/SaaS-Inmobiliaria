@@ -12,20 +12,15 @@ const authenticateToken = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
 
-    // Buscar usuario en la base de datos
-    try {
-      const authService = require('../services/authService');
-      const user = await authService.getUserById(decoded.userId);
-      req.user = user;
-    } catch (dbError) {
-      // Si no se encuentra en BD, usar datos del token
-      req.user = {
-        id: decoded.userId || 'temp-user-' + Date.now(),
-        email: decoded.email || 'temp@example.com',
-        name: decoded.name || 'Usuario Temporal',
-        role: decoded.role || 'AGENT'
-      };
+    // Buscar usuario en la base de datos - es obligatorio que exista
+    const authService = require('../services/authService');
+    const user = await authService.getUserById(decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Usuario no encontrado en la base de datos' });
     }
+    
+    req.user = user;
 
     next();
   } catch (error) {

@@ -1,4 +1,5 @@
-const clientService = require('../services/clientService');
+const ClientService = require('../services/clientService');
+const clientService = new ClientService();
 
 class ClientController {
   // Get all clients

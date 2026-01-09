@@ -1,77 +1,32 @@
-import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../services/api';
-import { Plus, Edit, Trash2, Building, Building2, Home, MapPin, DollarSign } from 'lucide-react';
+import { Plus, Building, DollarSign } from 'lucide-react';
+import { useProperties } from '../hooks/useProperties';
+import { usePropertyOperations } from '../hooks/usePropertyOperations';
+import PropertyList from '../components/PropertyList';
 
 const Properties = () => {
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 0
-  });
-  const [filters, setFilters] = useState({
-    type: '',
-    status: '',
-    listingType: '',
-    minPrice: '',
-    maxPrice: '',
-    city: '',
-    search: '' // Agregamos un campo de búsqueda general
-  });
+  // Usar hooks personalizados para separación de responsabilidades
+  const {
+    properties,
+    loading,
+    error,
+    pagination,
+    filters,
+    fetchProperties,
+    updateFilters,
+    resetFilters
+  } = useProperties();
 
-  const fetchProperties = useCallback(async (page = 1, currentFilters = filters) => {
-    try {
-      setLoading(true);
-      setError('');
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.limit.toString(),
-      });
-
-      // Agregamos los filtros a los parámetros de la URL
-      for (const key in currentFilters) {
-        if (currentFilters[key] !== '') { // Solo agregar si el valor no está vacío
-          params.append(key, currentFilters[key].toString());
-        }
-      }
-
-      const response = await api.get(`/properties?${params}`);
-      setProperties(response.data.properties || []);
-      setPagination(response.data.pagination || {
-        page: 1,
-        limit: 10,
-        total: 0,
-        pages: 0
-      });
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-      setError('Error al cargar las propiedades');
-      setProperties([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.limit, filters]); // Agregamos filters a las dependencias
-
-  useEffect(() => {
-    fetchProperties(1, filters); // Cargar propiedades al montar o cuando los filtros cambien
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchProperties, filters]);
+  const { deleteProperty, hasError: operationError } = usePropertyOperations();
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    updateFilters({ [name]: value });
   };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchProperties(1, filters); // Reiniciar a la primera página con los filtros actuales
+    fetchProperties(1, filters);
   };
 
   const handleDeleteProperty = async (id) => {
@@ -80,113 +35,14 @@ const Properties = () => {
     }
 
     try {
-      await api.delete(`/properties/${id}`);
-      fetchProperties(pagination.page, filters); // Recargar la página actual con los filtros actuales
+      await deleteProperty(id);
+      fetchProperties(pagination.page, filters);
     } catch (error) {
+      // El error ya se maneja en el hook
       console.error('Error deleting property:', error);
-      setError('Error al eliminar la propiedad');
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'AVAILABLE':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'SOLD':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'RENTED':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'AVAILABLE':
-        return 'Disponible';
-      case 'SOLD':
-        return 'Vendida';
-      case 'RENTED':
-        return 'Alquilada';
-      case 'PENDING':
-        return 'En proceso';
-      default:
-        return status;
-    }
-  };
-
-  const getTypeText = (type) => {
-    switch (type) {
-      case 'HOUSE':
-        return 'Casa';
-      case 'APARTMENT':
-        return 'Departamento';
-      case 'LAND':
-        return 'Terreno';
-      case 'COMMERCIAL':
-        return 'Comercial';
-      default:
-        return type;
-    }
-  };
-
-  const getTransactionType = (property) => {
-    if (property.listingType === 'RENT') {
-      return 'Alquiler';
-    } else if (property.listingType === 'SALE') {
-      return 'Venta';
-    } else if (property.listingType === 'SOLD') {
-      return 'Ya vendida';
-    } else if (property.listingType === 'RENTED_OUT') {
-      return 'Ya alquilada';
-    } else {
-      // Fallback to status-based logic for backward compatibility
-      switch (property.status) {
-        case 'RENTED':
-          return 'Alquiler';
-        default:
-          return 'Venta';
-      }
-    }
-  };
-
-  const getPropertyStatusLabel = (property) => {
-    // Lógica principal basada en listingType
-    if (property.listingType === 'SOLD') {
-      return { text: 'Ya vendida', color: 'bg-red-100 text-red-800 border-red-200' };
-    } else if (property.listingType === 'RENTED_OUT') {
-      return { text: 'Ya alquilada', color: 'bg-blue-100 text-blue-800 border-blue-200' };
-    } else if (property.listingType === 'SALE' && property.status === 'AVAILABLE') {
-      return { text: 'Disponible para venta', color: 'bg-green-100 text-green-800 border-green-200' };
-    } else if (property.listingType === 'RENT' && property.status === 'AVAILABLE') {
-      return { text: 'Disponible para alquiler', color: 'bg-green-100 text-green-800 border-green-200' };
-    } else if (property.listingType === 'SALE' && property.status === 'PENDING') {
-      return { text: 'En proceso de venta', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
-    } else if (property.listingType === 'RENT' && property.status === 'PENDING') {
-      return { text: 'En proceso de alquiler', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
-    }
-
-    // Fallback para casos no contemplados
-    return { text: getStatusText(property.status), color: getStatusColor(property.status) };
-  };
-
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'HOUSE':
-        return <Home className="h-6 w-6 text-gray-600" />;
-      case 'APARTMENT':
-        return <Building2 className="h-6 w-6 text-gray-600" />;
-      case 'LAND':
-        return <MapPin className="h-6 w-6 text-gray-600" />;
-      case 'COMMERCIAL':
-        return <Building className="h-6 w-6 text-gray-600" />;
-      default:
-        return <Building className="h-6 w-6 text-gray-600" />;
-    }
-  };
 
   if (loading && properties.length === 0) {
     return (
@@ -254,23 +110,6 @@ const Properties = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Publicación
-            </label>
-            <select
-              name="listingType"
-              value={filters.listingType}
-              onChange={handleFilterChange}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">Todos</option>
-              <option value="SALE">Venta</option>
-              <option value="RENT">Alquiler</option>
-              <option value="SOLD">Ya vendida</option>
-              <option value="RENTED_OUT">Ya alquilada</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
               Precio Mínimo
             </label>
             <input
@@ -319,103 +158,10 @@ const Properties = () => {
 
       {/* Lista de propiedades */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        {properties.length === 0 ? (
-          <div className="text-center py-12">
-            <Building className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">
-              No hay propiedades
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Comienza agregando tu primera propiedad.
-            </p>
-            <div className="mt-6">
-              <Link
-                to="/properties/new"
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Agregar Propiedad
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <ul className="divide-y divide-gray-200">
-            {properties.map((property) => (
-              <li key={property.id} className="px-6 py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center flex-1">
-                    <div className="flex-shrink-0">
-                      <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                        {getTypeIcon(property.type)}
-                      </div>
-                    </div>
-                    <div className="ml-4 flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-lg font-medium text-gray-900">
-                            {property.title}
-                          </h4>
-                          <div className="flex items-center text-sm text-gray-500 mt-1">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            {property.address}, {property.city}, {property.state}
-                          </div>
-                          <div className="flex items-center space-x-4 mt-2">
-                            <span className="text-sm text-gray-600">
-                              {getTypeText(property.type)}
-                            </span>
-                            {(() => {
-                              const statusInfo = getPropertyStatusLabel(property);
-                              return (
-                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${statusInfo.color}`}>
-                                  {statusInfo.text}
-                                </span>
-                              );
-                            })()}
-                            {property.bedrooms && (
-                              <span className="text-sm text-gray-600">
-                                {property.bedrooms} hab
-                              </span>
-                            )}
-                            {property.bathrooms && (
-                              <span className="text-sm text-gray-600">
-                                {property.bathrooms} baños
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center text-lg font-semibold text-gray-900">
-                            <DollarSign className="h-5 w-5 mr-1" />
-                            {property.price.toLocaleString()}
-                          </div>
-                          {property.currency && (
-                            <div className="text-sm text-gray-500 mt-1">
-                              {property.currency === 'USD' ? 'USD' : 'ARS'}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2 ml-4">
-                    <Link
-                      to={`/properties/${property.id}/edit`}
-                      className="text-indigo-600 hover:text-indigo-900 p-2"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </Link>
-                    <button
-                      onClick={() => handleDeleteProperty(property.id)}
-                      className="text-red-600 hover:text-red-900 p-2"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <PropertyList
+          properties={properties}
+          onDeleteProperty={handleDeleteProperty}
+        />
       </div>
 
       {/* Paginación */}

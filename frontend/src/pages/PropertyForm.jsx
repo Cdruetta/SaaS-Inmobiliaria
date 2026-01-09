@@ -17,13 +17,11 @@ const PropertyForm = () => {
     state: '',
     zipCode: '',
     price: '',
-    currency: 'USD', // Nuevo campo para la moneda, por defecto USD
     bedrooms: '',
     bathrooms: '',
     area: '',
     type: 'HOUSE', // Default type
     status: 'AVAILABLE', // Default status
-    listingType: 'SALE', // Nuevo campo: SALE, RENT, SOLD, RENTED_OUT
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -56,13 +54,11 @@ const PropertyForm = () => {
             state: property.state || '',
             zipCode: property.zipCode || '',
             price: property.price || '',
-            currency: property.currency || 'USD',
             bedrooms: property.bedrooms || '',
             bathrooms: property.bathrooms || '',
             area: property.area || '',
             type: property.type || 'HOUSE',
-            status: property.status || 'AVAILABLE',
-            listingType: property.listingType || 'SALE' // Asumimos SALE por defecto si no existe
+            status: property.status || 'AVAILABLE'
           });
         } catch (err) {
           setError('Error al cargar la propiedad.');
@@ -179,46 +175,17 @@ const PropertyForm = () => {
             <label htmlFor="price" className="block text-sm font-medium text-gray-700">
               Precio
             </label>
-            <div className="mt-1 flex rounded-md shadow-sm">
-              <input
-                type="number"
-                name="price"
-                id="price"
-                value={formData.price}
-                onChange={handleChange}
-                required
-                min="0"
-                step="0.01"
-                className="flex-1 block w-full rounded-none rounded-l-md border border-gray-300 py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <select
-                name="currency"
-                id="currency"
-                value={formData.currency}
-                onChange={handleChange}
-                className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-gray-500 text-sm"
-              >
-                <option value="USD">USD</option>
-                <option value="ARS">ARS</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label htmlFor="listingType" className="block text-sm font-medium text-gray-700">
-              Tipo de Publicación
-            </label>
-            <select
-              name="listingType"
-              id="listingType"
-              value={formData.listingType}
+            <input
+              type="number"
+              name="price"
+              id="price"
+              value={formData.price}
               onChange={handleChange}
+              required
+              min="0"
+              step="0.01"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="SALE">Venta</option>
-              <option value="RENT">Alquiler</option>
-              <option value="SOLD">Ya vendida</option>
-              <option value="RENTED_OUT">Ya alquilada</option>
-            </select>
+            />
           </div>
           <div className="md:col-span-2">
             <label htmlFor="description" className="block text-sm font-medium text-gray-700">

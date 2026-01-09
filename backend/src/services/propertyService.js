@@ -1,519 +1,192 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const SQLiteDatabase = require('../repositories/implementations/SQLiteDatabase');
+const PropertyValidator = require('./validation/PropertyValidator');
+const PropertyQueryBuilder = require('./queries/PropertyQueryBuilder');
+const PropertyFormatter = require('./formatters/PropertyFormatter');
 
 class PropertyService {
-  constructor() {
-    this.db = new Database(path.join(__dirname, '../../dev.db'));
+  constructor(database = null) {
+    // Dependency Injection - aplica DIP
+    this.db = database || new SQLiteDatabase();
+    this.validator = new PropertyValidator();
+    this.queryBuilder = new PropertyQueryBuilder();
+    this.formatter = new PropertyFormatter();
   }
 
   async getAllProperties(filters = {}, userId = null) {
-    const {
-      type,
-      status,
-      listingType,
-      minPrice,
-      maxPrice,
-      city,
-      search,
-      page = 1,
-      limit = 10
-    } = filters;
+    try {
+      const pagination = {
+        page: parseInt(filters.page) || 1,
+        limit: parseInt(filters.limit) || 10
+      };
 
-    // Build SQL query dynamically
-    let whereConditions = [];
-    let params = [];
+      // Usar el query builder para construir la consulta
+      const { countQuery, dataQuery, params, countParams } = this.queryBuilder.buildGetAllQuery(
+        filters,
+        userId,
+        pagination
+      );
 
-    // Filter by ownerId if not ADMIN
-    if (userId) {
-      whereConditions.push('p.ownerId = ?');
-      params.push(userId);
+      // Ejecutar consultas
+      const { total } = this.db.get(countQuery, countParams);
+      const rows = this.db.all(dataQuery, params);
+
+      // Formatear respuesta
+      const properties = this.formatter.formatProperties(rows);
+
+      return {
+        properties,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          pages: Math.ceil(total / pagination.limit)
+        }
+      };
+    } catch (error) {
+      console.error('Error in getAllProperties:', error);
+      throw error;
     }
-
-    if (type) {
-      whereConditions.push('p.type = ?');
-      params.push(type);
-    }
-    if (status) {
-      whereConditions.push('p.status = ?');
-      params.push(status);
-    }
-    if (listingType) {
-      whereConditions.push('p.listingType = ?');
-      params.push(listingType);
-    }
-    if (city) {
-      whereConditions.push('p.city LIKE ?');
-      params.push(`%${city}%`);
-    }
-    if (minPrice) {
-      whereConditions.push('p.price >= ?');
-      params.push(parseFloat(minPrice));
-    }
-    if (maxPrice) {
-      whereConditions.push('p.price <= ?');
-      params.push(parseFloat(maxPrice));
-    }
-    if (search) {
-      whereConditions.push('(p.title LIKE ? OR p.address LIKE ? OR p.city LIKE ? OR p.state LIKE ?)');
-      const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam, searchParam);
-    }
-
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM properties p
-      ${whereClause}
-    `;
-    const { total } = this.db.prepare(countQuery).get(...params);
-
-    // Get properties with pagination
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const propertiesQuery = `
-      SELECT
-        p.*,
-        u.id as owner_id,
-        u.name as owner_name,
-        u.email as owner_email,
-        COUNT(t.id) as transaction_count
-      FROM properties p
-      LEFT JOIN users u ON p.ownerId = u.id
-      LEFT JOIN transactions t ON p.id = t.propertyId
-      ${whereClause}
-      GROUP BY p.id
-      ORDER BY p.createdAt DESC
-      LIMIT ? OFFSET ?
-    `;
-
-    params.push(parseInt(limit), offset);
-    const rows = this.db.prepare(propertiesQuery).all(...params);
-
-    // Format the response
-    const formattedProperties = rows.map(row => ({
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      type: row.type,
-      status: row.status,
-      price: row.price,
-      currency: row.currency,
-      listingType: row.listingType,
-      address: row.address,
-      city: row.city,
-      state: row.state,
-      zipCode: row.zipCode,
-      bedrooms: row.bedrooms,
-      bathrooms: row.bathrooms,
-      area: row.area,
-      yearBuilt: row.yearBuilt,
-      features: row.features ? JSON.parse(row.features) : [],
-      images: row.images ? JSON.parse(row.images) : [],
-      ownerId: row.ownerId,
-      owner: {
-        id: row.owner_id,
-        name: row.owner_name,
-        email: row.owner_email
-      },
-      transactionCount: row.transaction_count,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt
-    }));
-
-    return {
-      properties: formattedProperties,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
-      }
-    };
   }
 
   async getPropertyById(id, userId = null) {
-    // Build query (if userId is null, it's admin and can see all properties)
-    let query = `
-      SELECT
-        p.*,
-        u.id as owner_id,
-        u.name as owner_name,
-        u.email as owner_email
-      FROM properties p
-      LEFT JOIN users u ON p.ownerId = u.id
-      WHERE p.id = ?
-    `;
+    try {
+      // Construir y ejecutar query de propiedad
+      const { query: propertyQuery, params: propertyParams } = this.queryBuilder.buildGetByIdQuery(id, userId);
+      const propertyRow = this.db.get(propertyQuery, propertyParams);
 
-    let params = [id];
-
-    if (userId) {
-      query += ' AND p.ownerId = ?';
-      params.push(userId);
-    }
-
-    const propertyRow = this.db.prepare(query).get(...params);
-
-    if (!propertyRow) {
-      throw new Error('Propiedad no encontrada');
-    }
-
-    // Get transactions for this property
-    const transactionsQuery = `
-      SELECT
-        t.*,
-        c.firstName as client_firstName,
-        c.lastName as client_lastName,
-        c.email as client_email
-      FROM transactions t
-      LEFT JOIN clients c ON t.clientId = c.id
-      WHERE t.propertyId = ?
-      ORDER BY t.createdAt DESC
-    `;
-
-    const transactionRows = this.db.prepare(transactionsQuery).all(id);
-
-    // Format transactions
-    const transactions = transactionRows.map(t => ({
-      id: t.id,
-      type: t.type,
-      status: t.status,
-      amount: t.amount,
-      commission: t.commission,
-      notes: t.notes,
-      createdAt: t.createdAt,
-      updatedAt: t.updatedAt,
-      clientId: t.clientId,
-      agentId: t.agentId,
-      client: {
-        firstName: t.client_firstName,
-        lastName: t.client_lastName,
-        email: t.client_email
+      if (!propertyRow) {
+        throw new Error('Propiedad no encontrada');
       }
-    }));
 
-    // Format the response
-    return {
-      id: propertyRow.id,
-      title: propertyRow.title,
-      description: propertyRow.description,
-      type: propertyRow.type,
-      status: propertyRow.status,
-      price: propertyRow.price,
-      currency: propertyRow.currency,
-      listingType: propertyRow.listingType,
-      address: propertyRow.address,
-      city: propertyRow.city,
-      state: propertyRow.state,
-      zipCode: propertyRow.zipCode,
-      bedrooms: propertyRow.bedrooms,
-      bathrooms: propertyRow.bathrooms,
-      area: propertyRow.area,
-      yearBuilt: propertyRow.yearBuilt,
-      features: propertyRow.features ? JSON.parse(propertyRow.features) : [],
-      images: propertyRow.images ? JSON.parse(propertyRow.images) : [],
-      ownerId: propertyRow.ownerId,
-      owner: {
-        id: propertyRow.owner_id,
-        name: propertyRow.owner_name,
-        email: propertyRow.owner_email
-      },
-      transactionCount: transactions.length,
-      transactions: transactions,
-      createdAt: propertyRow.createdAt,
-      updatedAt: propertyRow.updatedAt
-    };
+      // Obtener transacciones
+      const { query: transactionsQuery, params: transactionsParams } = this.queryBuilder.buildGetTransactionsQuery(id);
+      const transactionRows = this.db.all(transactionsQuery, transactionsParams);
+
+      // Formatear respuesta
+      const property = this.formatter.formatPropertyRow(propertyRow);
+      const transactions = this.formatter.formatTransactions(transactionRows);
+
+      return {
+        ...property,
+        transactionCount: transactions.length,
+        transactions
+      };
+    } catch (error) {
+      console.error('Error in getPropertyById:', error);
+      throw error;
+    }
   }
 
   async createProperty(propertyData, ownerId) {
-    const {
-      title,
-      description,
-      type,
-      price,
-      currency,
-      address,
-      city,
-      state,
-      zipCode,
-      bedrooms,
-      bathrooms,
-      area,
-      yearBuilt,
-      features,
-      images,
-      listingType
-    } = propertyData;
+    try {
+      // Validar datos
+      this.validator.validateCreate(propertyData);
 
-    // Validation
-    if (!title || !type || !price || !address || !city || !state) {
-      throw new Error('Campos requeridos faltantes');
+      // Generar ID y timestamps
+      const { v4: uuidv4 } = require('uuid');
+      const now = new Date().toISOString();
+      const propertyId = uuidv4();
+
+      // Sanitizar datos
+      const sanitizedData = this.validator.sanitize(propertyData);
+
+      // Preparar datos para inserción
+      const propertyToInsert = {
+        ...sanitizedData,
+        id: propertyId,
+        ownerId,
+        createdAt: now,
+        updatedAt: now,
+        features: JSON.stringify(sanitizedData.features),
+        images: JSON.stringify(sanitizedData.images)
+      };
+
+      // Crear propiedad
+      const { query, params } = this.queryBuilder.buildCreateQuery(propertyToInsert);
+      this.db.run(query, params);
+
+      // Obtener propiedad creada con información del owner
+      const { query: selectQuery, params: selectParams } = this.queryBuilder.buildGetByIdQuery(propertyId, null);
+      const row = this.db.get(selectQuery, selectParams);
+
+      // Formatear respuesta
+      return this.formatter.formatPropertyRow({ ...row, transaction_count: 0 });
+    } catch (error) {
+      console.error('Error in createProperty:', error);
+      throw error;
     }
-
-    const { v4: uuidv4 } = require('uuid');
-    const now = new Date().toISOString();
-    const propertyId = uuidv4();
-
-    // Create property using better-sqlite3
-    const insertStmt = this.db.prepare(`
-      INSERT INTO properties (
-        id, title, description, type, status, price, currency, listingType,
-        address, city, state, zipCode, bedrooms, bathrooms, area, yearBuilt,
-        features, images, ownerId, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    insertStmt.run(
-      propertyId,
-      title.trim(),
-      description?.trim() || null,
-      type,
-      'AVAILABLE', // default status
-      parseFloat(price),
-      currency || 'USD',
-      listingType || 'SALE',
-      address.trim(),
-      city.trim(),
-      state.trim(),
-      zipCode?.trim() || null,
-      bedrooms ? parseInt(bedrooms) : null,
-      bathrooms ? parseFloat(bathrooms) : null,
-      area ? parseFloat(area) : null,
-      yearBuilt ? parseInt(yearBuilt) : null,
-      features ? JSON.stringify(features) : null,
-      images ? JSON.stringify(images) : null,
-      ownerId,
-      now,
-      now
-    );
-
-    // Get the created property with owner info
-    const selectStmt = this.db.prepare(`
-      SELECT
-        p.*,
-        u.id as owner_id,
-        u.name as owner_name,
-        u.email as owner_email,
-        0 as transaction_count
-      FROM properties p
-      LEFT JOIN users u ON p.ownerId = u.id
-      WHERE p.id = ?
-    `);
-
-    const row = selectStmt.get(propertyId);
-
-    // Format the response
-    return {
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      type: row.type,
-      status: row.status,
-      price: row.price,
-      currency: row.currency,
-      listingType: row.listingType,
-      address: row.address,
-      city: row.city,
-      state: row.state,
-      zipCode: row.zipCode,
-      bedrooms: row.bedrooms,
-      bathrooms: row.bathrooms,
-      area: row.area,
-      yearBuilt: row.yearBuilt,
-      features: row.features ? JSON.parse(row.features) : [],
-      images: row.images ? JSON.parse(row.images) : [],
-      ownerId: row.ownerId,
-      owner: {
-        id: row.owner_id,
-        name: row.owner_name,
-        email: row.owner_email
-      },
-      transactionCount: row.transaction_count,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt
-    };
   }
 
   async updateProperty(id, propertyData, userId) {
-    // First check if property exists and user owns it
-    let checkQuery = 'SELECT * FROM properties WHERE id = ?';
-    let checkParams = [id];
+    try {
+      // Verificar que la propiedad existe y el usuario tiene permisos
+      const { query: checkQuery, params: checkParams } = this.queryBuilder.buildGetByIdQuery(id, userId);
+      const existingRow = this.db.get(checkQuery, checkParams);
 
-    if (userId) {
-      checkQuery += ' AND ownerId = ?';
-      checkParams.push(userId);
-    }
+      if (!existingRow) {
+        throw new Error('Propiedad no encontrada o no tienes permiso para modificarla');
+      }
 
-    const existingRow = this.db.prepare(checkQuery).get(...checkParams);
+      // Validar datos si se proporcionan
+      if (propertyData.price !== undefined) {
+        this.validator.validatePrice(propertyData.price);
+      }
+      if (propertyData.type !== undefined) {
+        this.validator.validateType(propertyData.type);
+      }
+      if (propertyData.status !== undefined) {
+        this.validator.validateStatus(propertyData.status);
+      }
 
-    if (!existingRow) {
-      throw new Error('Propiedad no encontrada o no tienes permiso para modificarla');
-    }
+      // Preparar campos a actualizar
+      const updates = {};
+      const fieldsToUpdate = [
+        'title', 'description', 'type', 'status', 'price',
+        'address', 'city', 'state', 'zipCode', 'bedrooms',
+        'bathrooms', 'area', 'yearBuilt', 'features', 'images'
+      ];
 
-    // Build update query dynamically
-    const updateFields = [];
-    const updateParams = [];
+      fieldsToUpdate.forEach(field => {
+        if (propertyData[field] !== undefined) {
+          if (field === 'title' || field === 'description' || field === 'address' ||
+              field === 'city' || field === 'state' || field === 'zipCode') {
+            updates[field] = propertyData[field]?.trim() || null;
+          } else if (field === 'price') {
+            updates[field] = parseFloat(propertyData[field]);
+          } else if (field === 'bedrooms' || field === 'yearBuilt') {
+            updates[field] = propertyData[field] ? parseInt(propertyData[field]) : null;
+          } else if (field === 'bathrooms' || field === 'area') {
+            updates[field] = propertyData[field] ? parseFloat(propertyData[field]) : null;
+          } else if (field === 'features' || field === 'images') {
+            updates[field] = JSON.stringify(propertyData[field] || []);
+          } else {
+            updates[field] = propertyData[field];
+          }
+        }
+      });
 
-    const {
-      title,
-      description,
-      type,
-      status,
-      price,
-      currency,
-      address,
-      city,
-      state,
-      zipCode,
-      bedrooms,
-      bathrooms,
-      area,
-      yearBuilt,
-      features,
-      images,
-      listingType
-    } = propertyData;
+      if (Object.keys(updates).length === 0) {
+        return this.formatter.formatPropertyRow(existingRow);
+      }
 
-    // Only add fields that are provided (not undefined)
-    if (title !== undefined) {
-      updateFields.push('title = ?');
-      updateParams.push(title.trim());
-    }
-    if (description !== undefined) {
-      updateFields.push('description = ?');
-      updateParams.push(description?.trim() || null);
-    }
-    if (type !== undefined) {
-      updateFields.push('type = ?');
-      updateParams.push(type);
-    }
-    if (status !== undefined) {
-      updateFields.push('status = ?');
-      updateParams.push(status);
-    }
-    if (price !== undefined) {
-      updateFields.push('price = ?');
-      updateParams.push(parseFloat(price));
-    }
-    if (currency !== undefined) {
-      updateFields.push('currency = ?');
-      updateParams.push(currency);
-    }
-    if (address !== undefined) {
-      updateFields.push('address = ?');
-      updateParams.push(address.trim());
-    }
-    if (city !== undefined) {
-      updateFields.push('city = ?');
-      updateParams.push(city.trim());
-    }
-    if (state !== undefined) {
-      updateFields.push('state = ?');
-      updateParams.push(state.trim());
-    }
-    if (zipCode !== undefined) {
-      updateFields.push('zipCode = ?');
-      updateParams.push(zipCode?.trim() || null);
-    }
-    if (bedrooms !== undefined) {
-      updateFields.push('bedrooms = ?');
-      updateParams.push(bedrooms ? parseInt(bedrooms) : null);
-    }
-    if (bathrooms !== undefined) {
-      updateFields.push('bathrooms = ?');
-      updateParams.push(bathrooms ? parseFloat(bathrooms) : null);
-    }
-    if (area !== undefined) {
-      updateFields.push('area = ?');
-      updateParams.push(area ? parseFloat(area) : null);
-    }
-    if (yearBuilt !== undefined) {
-      updateFields.push('yearBuilt = ?');
-      updateParams.push(yearBuilt ? parseInt(yearBuilt) : null);
-    }
-    if (features !== undefined) {
-      updateFields.push('features = ?');
-      updateParams.push(features ? JSON.stringify(features) : null);
-    }
-    if (images !== undefined) {
-      updateFields.push('images = ?');
-      updateParams.push(images ? JSON.stringify(images) : null);
-    }
-    if (listingType !== undefined) {
-      updateFields.push('listingType = ?');
-      updateParams.push(listingType);
-    }
+      // Agregar timestamp de actualización
+      updates.updatedAt = new Date().toISOString();
 
-    // If no fields to update, return existing property formatted
-    if (updateFields.length === 0) {
-      return this.formatPropertyRow(existingRow);
+      // Actualizar propiedad
+      const { query: updateQuery, params: updateParams } = this.queryBuilder.buildUpdateQuery(id, updates);
+      this.db.run(updateQuery, updateParams);
+
+      // Obtener propiedad actualizada
+      const { query: selectQuery, params: selectParams } = this.queryBuilder.buildGetByIdQuery(id, null);
+      const updatedRow = this.db.get(selectQuery, selectParams);
+
+      return this.formatter.formatPropertyRow(updatedRow);
+    } catch (error) {
+      console.error('Error in updateProperty:', error);
+      throw error;
     }
-
-    // Add updatedAt and id to params
-    updateFields.push('updatedAt = ?');
-    updateParams.push(new Date().toISOString());
-    updateParams.push(id);
-
-    // Update the property
-    const updateQuery = `
-      UPDATE properties
-      SET ${updateFields.join(', ')}
-      WHERE id = ?
-    `;
-
-    this.db.prepare(updateQuery).run(...updateParams);
-
-    // Get the updated property
-    const selectStmt = this.db.prepare(`
-      SELECT
-        p.*,
-        u.id as owner_id,
-        u.name as owner_name,
-        u.email as owner_email,
-        COUNT(t.id) as transaction_count
-      FROM properties p
-      LEFT JOIN users u ON p.ownerId = u.id
-      LEFT JOIN transactions t ON p.id = t.propertyId
-      WHERE p.id = ?
-      GROUP BY p.id
-    `);
-
-    const row = selectStmt.get(id);
-    return this.formatPropertyRow(row);
   }
 
-  // Helper method to format property row
-  formatPropertyRow(row) {
-    return {
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      type: row.type,
-      status: row.status,
-      price: row.price,
-      currency: row.currency,
-      listingType: row.listingType,
-      address: row.address,
-      city: row.city,
-      state: row.state,
-      zipCode: row.zipCode,
-      bedrooms: row.bedrooms,
-      bathrooms: row.bathrooms,
-      area: row.area,
-      yearBuilt: row.yearBuilt,
-      features: row.features ? JSON.parse(row.features) : [],
-      images: row.images ? JSON.parse(row.images) : [],
-      ownerId: row.ownerId,
-      owner: {
-        id: row.owner_id,
-        name: row.owner_name,
-        email: row.owner_email
-      },
-      transactionCount: row.transaction_count || 0,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt
-    };
-  }
 
   async deleteProperty(id, userId) {
     // First check if property exists and user owns it (if not admin)
@@ -550,46 +223,17 @@ class PropertyService {
 
   async getPropertyStats(userId = null) {
     try {
-      // Build where clause for SQL
-      const whereClause = userId ? 'WHERE ownerId = ?' : '';
-      const whereParams = userId ? [userId] : [];
+      const { queries, params } = this.queryBuilder.buildStatsQuery(userId);
 
-      // Get total count
-      const totalProperties = this.db.prepare(`SELECT COUNT(*) as count FROM properties ${whereClause}`).get(...whereParams).count;
+      // Ejecutar consultas
+      const totalProperties = this.db.get(queries.totalProperties, params).count;
+      const totalValueResult = this.db.get(queries.totalValue, params);
+      const totalValue = totalValueResult.sum || 0;
+      const statusRows = this.db.all(queries.byStatus, params);
+      const typeRows = this.db.all(queries.byType, params);
 
-      // Get total value
-      const totalValue = this.db.prepare(`SELECT SUM(price) as sum FROM properties ${whereClause}`).get(...whereParams).sum || 0;
-
-      // Get stats by status
-      const statusQuery = `
-        SELECT status, COUNT(*) as count, SUM(price) as value
-        FROM properties
-        ${whereClause}
-        GROUP BY status
-      `;
-      const statusRows = this.db.prepare(statusQuery).all(...whereParams);
-
-      // Get stats by type
-      const typeQuery = `
-        SELECT type, COUNT(*) as count, SUM(price) as value
-        FROM properties
-        ${whereClause}
-        GROUP BY type
-      `;
-      const typeRows = this.db.prepare(typeQuery).all(...whereParams);
-
-      return {
-        totalProperties,
-        totalValue,
-        byStatus: statusRows.reduce((acc, row) => {
-          acc[row.status] = { count: row.count, value: row.value || 0 };
-          return acc;
-        }, {}),
-        byType: typeRows.reduce((acc, row) => {
-          acc[row.type] = { count: row.count, value: row.value || 0 };
-          return acc;
-        }, {})
-      };
+      // Formatear respuesta
+      return this.formatter.formatStats(statusRows, typeRows, totalProperties, totalValue);
     } catch (error) {
       console.error('Error in getPropertyStats:', error);
       return {

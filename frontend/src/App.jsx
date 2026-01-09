@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import AuthCard from './components/AuthCard';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
 import PropertyForm from './pages/PropertyForm';
@@ -53,12 +54,12 @@ function App() {
             {/* Rutas públicas */}
             <Route path="/login" element={
               <PublicRoute>
-                <AuthCard />
+                <Login />
               </PublicRoute>
             } />
             <Route path="/register" element={
               <PublicRoute>
-                <AuthCard />
+                <Register />
               </PublicRoute>
             } />
 

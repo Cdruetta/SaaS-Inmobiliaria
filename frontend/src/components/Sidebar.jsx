@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Menu, Home, Building, Users, DollarSign, User, LogOut, ChevronDown } from 'lucide-react';
 import './Sidebar.css';
 
 const Sidebar = () => {
@@ -42,7 +43,7 @@ const Sidebar = () => {
           className="sidebar-burger"
           onClick={toggleSidebar}
         >
-          <i className="ai-three-line-horizontal"></i>
+          <Menu size={20} />
         </button>
         <div className="logo">
           <span>InmoApp</span>
@@ -55,7 +56,7 @@ const Sidebar = () => {
             onClick={() => handleNavigation('/dashboard')}
             className={isActive('/dashboard') ? 'active' : ''}
           >
-            <i className="ai-home-alt1"></i>
+            <Home size={20} />
             <p>Dashboard</p>
           </button>
         </li>
@@ -66,9 +67,9 @@ const Sidebar = () => {
             onClick={() => toggleSubMenu('properties')}
             className={activeMenus.properties ? 'active' : ''}
           >
-            <i className="ai-shipping-box-v1"></i>
+            <Building size={20} />
             <p>Propiedades</p>
-            <i className="ai-chevron-down-small"></i>
+            <ChevronDown size={16} />
           </button>
           <div className={`sub-menu ${activeMenus.properties ? 'open' : ''}`}>
             <ul>
@@ -100,9 +101,9 @@ const Sidebar = () => {
             onClick={() => toggleSubMenu('clients')}
             className={activeMenus.clients ? 'active' : ''}
           >
-            <i className="ai-person"></i>
+            <Users size={20} />
             <p>Clientes</p>
-            <i className="ai-chevron-down-small"></i>
+            <ChevronDown size={16} />
           </button>
           <div className={`sub-menu ${activeMenus.clients ? 'open' : ''}`}>
             <ul>
@@ -134,9 +135,9 @@ const Sidebar = () => {
             onClick={() => toggleSubMenu('transactions')}
             className={activeMenus.transactions ? 'active' : ''}
           >
-            <i className="ai-cart"></i>
+            <DollarSign size={20} />
             <p>Transacciones</p>
-            <i className="ai-chevron-down-small"></i>
+            <ChevronDown size={16} />
           </button>
           <div className={`sub-menu ${activeMenus.transactions ? 'open' : ''}`}>
             <ul>
@@ -168,7 +169,7 @@ const Sidebar = () => {
             onClick={() => handleNavigation('/profile')}
             className={isActive('/profile') ? 'active' : ''}
           >
-            <i className="ai-lock-on"></i>
+            <User size={20} />
             <p>Perfil</p>
           </button>
         </li>
@@ -178,7 +179,7 @@ const Sidebar = () => {
             type="button"
             onClick={handleLogout}
           >
-            <i className="ai-log-out"></i>
+            <LogOut size={20} />
             <p>Cerrar Sesión</p>
           </button>
         </li>
