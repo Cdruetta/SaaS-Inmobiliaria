@@ -1,0 +1,50 @@
+# Render deployment configuration
+# https://docs.render.com/deploy-render-yaml
+
+services:
+  # Backend API
+  - type: web
+    name: saas-inmobiliaria-backend
+    env: node
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        sync: false # Set in dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: saas-inmobiliaria-frontend
+          property: host
+      - key: LOG_LEVEL
+        value: info
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 1000
+
+  # Frontend React App
+  - type: web
+    name: saas-inmobiliaria-frontend
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: saas-inmobiliaria-backend
+          property: host
+
+# PostgreSQL Database (if using Render PostgreSQL instead of Neon)
+# databases:
+#   - name: saas-inmobiliaria-db
+#     databaseName: saas_inmobiliaria
+#     user: saas_user
+#     plan: starter
