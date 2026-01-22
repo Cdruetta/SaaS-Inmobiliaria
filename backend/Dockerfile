@@ -8,8 +8,8 @@ FROM node:18-alpine
 # Establecer directorio de trabajo
 WORKDIR /app
 
-# Instalar dependencias del sistema para SQLite
-RUN apk add --no-cache sqlite
+# Instalar dependencias del sistema para PostgreSQL
+RUN apk add --no-cache postgresql-client
 
 # Copiar archivos de configuración de dependencias
 COPY package*.json ./
@@ -33,7 +33,7 @@ EXPOSE 3001
 # Variables de entorno por defecto
 ENV NODE_ENV=production
 ENV PORT=3001
-ENV DATABASE_URL="file:/app/data/prod.db"
+# DATABASE_URL debe ser configurada en el servicio de despliegue (Render, Railway, etc.)
 
 # Comando para ejecutar la aplicación
 CMD ["npm", "start"]
