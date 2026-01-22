@@ -21,6 +21,9 @@ RUN npm ci --only=production && npm cache clean --force
 COPY src/ ./src/
 COPY prisma/ ./prisma/
 
+# Cambiar al directorio correcto para Prisma
+WORKDIR /app
+
 # Crear directorio para base de datos y logs
 RUN mkdir -p /app/data /app/logs
 
