@@ -33,15 +33,15 @@ class PropertyService {
       // Formatear respuesta
       const properties = this.formatter.formatProperties(rows);
 
-      return {
+    return {
         properties,
-        pagination: {
+      pagination: {
           page: pagination.page,
           limit: pagination.limit,
-          total,
+        total,
           pages: Math.ceil(total / pagination.limit)
-        }
-      };
+      }
+    };
     } catch (error) {
       console.error('Error in getAllProperties:', error);
       throw error;
@@ -54,9 +54,9 @@ class PropertyService {
       const { query: propertyQuery, params: propertyParams } = this.queryBuilder.buildGetByIdQuery(id, userId);
       const propertyRow = this.db.get(propertyQuery, propertyParams);
 
-      if (!propertyRow) {
-        throw new Error('Propiedad no encontrada');
-      }
+    if (!propertyRow) {
+      throw new Error('Propiedad no encontrada');
+    }
 
       // Obtener transacciones
       const { query: transactionsQuery, params: transactionsParams } = this.queryBuilder.buildGetTransactionsQuery(id);
@@ -66,11 +66,11 @@ class PropertyService {
       const property = this.formatter.formatPropertyRow(propertyRow);
       const transactions = this.formatter.formatTransactions(transactionRows);
 
-      return {
+    return {
         ...property,
-        transactionCount: transactions.length,
+      transactionCount: transactions.length,
         transactions
-      };
+    };
     } catch (error) {
       console.error('Error in getPropertyById:', error);
       throw error;
@@ -83,9 +83,9 @@ class PropertyService {
       this.validator.validateCreate(propertyData);
 
       // Generar ID y timestamps
-      const { v4: uuidv4 } = require('uuid');
-      const now = new Date().toISOString();
-      const propertyId = uuidv4();
+    const { v4: uuidv4 } = require('uuid');
+    const now = new Date().toISOString();
+    const propertyId = uuidv4();
 
       // Sanitizar datos
       const sanitizedData = this.validator.sanitize(propertyData);
@@ -94,7 +94,7 @@ class PropertyService {
       const propertyToInsert = {
         ...sanitizedData,
         id: propertyId,
-        ownerId,
+      ownerId,
         createdAt: now,
         updatedAt: now,
         features: JSON.stringify(sanitizedData.features),
@@ -123,20 +123,20 @@ class PropertyService {
       const { query: checkQuery, params: checkParams } = this.queryBuilder.buildGetByIdQuery(id, userId);
       const existingRow = this.db.get(checkQuery, checkParams);
 
-      if (!existingRow) {
-        throw new Error('Propiedad no encontrada o no tienes permiso para modificarla');
-      }
+    if (!existingRow) {
+      throw new Error('Propiedad no encontrada o no tienes permiso para modificarla');
+    }
 
       // Validar datos si se proporcionan
       if (propertyData.price !== undefined) {
         this.validator.validatePrice(propertyData.price);
-      }
+    }
       if (propertyData.type !== undefined) {
         this.validator.validateType(propertyData.type);
-      }
+    }
       if (propertyData.status !== undefined) {
         this.validator.validateStatus(propertyData.status);
-      }
+    }
 
       // Preparar campos a actualizar
       const updates = {};
@@ -161,13 +161,13 @@ class PropertyService {
             updates[field] = JSON.stringify(propertyData[field] || []);
           } else {
             updates[field] = propertyData[field];
-          }
+    }
         }
       });
 
       if (Object.keys(updates).length === 0) {
         return this.formatter.formatPropertyRow(existingRow);
-      }
+    }
 
       // Agregar timestamp de actualización
       updates.updatedAt = new Date().toISOString();

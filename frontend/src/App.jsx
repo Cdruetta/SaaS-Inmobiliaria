@@ -3,7 +3,7 @@ import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
+import Dashboard from "./features/dashboard/Dashboard";
 import Properties from './pages/Properties';
 import PropertyForm from './pages/PropertyForm';
 import Clients from './pages/Clients';

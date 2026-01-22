@@ -22,7 +22,7 @@ export const ClientValidators = {
       errors.push('El email es requerido');
     }
 
-    if (data.email && !this.validateEmail(data.email)) {
+    if (data.email && !ClientValidators.validateEmail(data.email)) {
       errors.push('El email no tiene un formato válido');
     }
 
@@ -81,11 +81,11 @@ export const ClientValidators = {
   sanitizeFormData: (data) => {
     return {
       ...data,
-      firstName: data.firstName?.trim(),
-      lastName: data.lastName?.trim(),
-      email: data.email?.trim().toLowerCase(),
-      phone: data.phone?.trim(),
-      address: data.address?.trim(),
+      firstName: data.firstName?.trim() || '',
+      lastName: data.lastName?.trim() || '',
+      email: data.email?.trim().toLowerCase() || '',
+      phone: data.phone?.trim() || '',
+      address: data.address?.trim() || '',
       preferences: data.preferences || []
     };
   }

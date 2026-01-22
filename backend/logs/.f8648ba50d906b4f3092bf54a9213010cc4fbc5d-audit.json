@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "D:\\CRISTIAN\\SaaS\\backend\\logs\\.f8648ba50d906b4f3092bf54a9213010cc4fbc5d-audit.json",
+    "files": [
+        {
+            "date": 1769020639821,
+            "name": "D:\\CRISTIAN\\SaaS\\backend\\logs\\combined-2026-01-21.log",
+            "hash": "26dc92533c3a867c9a822c952183b7836276fa32166bdcd13eefcf25f867c8b5"
+        },
+        {
+            "date": 1769079852603,
+            "name": "D:\\CRISTIAN\\SaaS\\backend\\logs\\combined-2026-01-22.log",
+            "hash": "fbcf887780246f7d35add44e71a914119a22a6424a66ed59f6438087c0f5aafc"
+        }
+    ],
+    "hashType": "sha256"
+}

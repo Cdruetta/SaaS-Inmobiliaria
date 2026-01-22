@@ -7,11 +7,24 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
+// Import logger
+const logger = require('./services/logger');
+
+// Import metrics service
+const MetricsService = require('./services/metrics');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet());
+
+// Request logging middleware
+const requestLogger = require('./middlewares/requestLogger');
+app.use(requestLogger);
+
+// HTTP Metrics middleware
+app.use(MetricsService.httpMetricsMiddleware());
 
 // CORS configuration for development
 const corsOptions = {
@@ -51,14 +64,16 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/properties', require('./routes/properties'));
 app.use('/api/clients', require('./routes/clients'));
 app.use('/api/transactions', require('./routes/transactions'));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+// Health check con métricas detalladas
+app.get('/health', MetricsService.healthCheck());
+
+// Métricas de Prometheus
+app.get('/metrics', MetricsService.metricsEndpoint());
 
 
 // Error handling middleware

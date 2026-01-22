@@ -1,101 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+import { useDataManager } from './useDataManager';
 
 /**
- * Hook personalizado para manejar propiedades
- * Aplica el principio de Responsabilidad Única (SRP)
+ * Hook especializado para manejar propiedades
+ * Usa el hook genérico useDataManager aplicando el principio DRY
  */
 export const useProperties = () => {
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 0
-  });
-  const [filters, setFilters] = useState({
-    type: '',
-    status: '',
-    minPrice: '',
-    maxPrice: '',
-    city: '',
-    search: ''
-  });
-
-  const fetchProperties = useCallback(async (page = 1, currentFilters = filters) => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.limit.toString(),
-      });
-
-      // Agregar filtros a los parámetros
-      Object.entries(currentFilters).forEach(([key, value]) => {
-        if (value !== '') {
-          params.append(key, value.toString());
-        }
-      });
-
-      const response = await api.get(`/properties?${params}`);
-      setProperties(response.data.properties || []);
-      setPagination(response.data.pagination || {
-        page: 1,
-        limit: 10,
-        total: 0,
-        pages: 0
-      });
-    } catch (error) {
-      console.error('Error fetching properties:', error);
-      setError('Error al cargar las propiedades');
-      setProperties([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.limit, filters]);
-
-  const updateFilters = useCallback((newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-  }, []);
-
-  const resetFilters = useCallback(() => {
-    setFilters({
+  const dataManager = useDataManager({
+    endpoint: 'properties',
+    initialFilters: {
       type: '',
       status: '',
       minPrice: '',
       maxPrice: '',
       city: '',
       search: ''
-    });
-  }, []);
+    },
+    initialPageSize: 10
+  });
 
-  // Efecto para cargar propiedades cuando cambian los filtros
-  useEffect(() => {
-    fetchProperties(1, filters);
-  }, [fetchProperties, filters]);
-
+  // Alias para mantener compatibilidad con la API existente
   return {
     // Estado
-    properties,
-    loading,
-    error,
-    pagination,
-    filters,
+    properties: dataManager.data,
+    loading: dataManager.loading,
+    error: dataManager.error,
+    pagination: dataManager.pagination,
+    filters: dataManager.filters,
 
     // Acciones
-    fetchProperties,
-    updateFilters,
-    resetFilters,
+    fetchProperties: dataManager.fetchData,
+    updateFilters: dataManager.updateFilters,
+    resetFilters: dataManager.resetFilters,
 
     // Utilidades
-    hasProperties: properties.length > 0,
-    isLoading: loading,
-    hasError: error !== '',
-    hasNextPage: pagination.page < pagination.pages,
-    hasPrevPage: pagination.page > 1
+    hasProperties: dataManager.hasData,
+    isLoading: dataManager.isLoading,
+    hasError: dataManager.hasError,
+    hasNextPage: dataManager.hasNextPage,
+    hasPrevPage: dataManager.hasPrevPage
   };
 };

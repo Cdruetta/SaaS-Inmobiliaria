@@ -1,0 +1,41 @@
+version: '3.8'
+
+# Configuración de desarrollo (se combina con docker-compose.yml)
+
+services:
+  # Backend en modo desarrollo con hot reload
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:/app/dev.db
+      - JWT_SECRET=dev-secret-key-change-in-production
+      - CORS_ORIGIN=http://localhost:5173
+      - LOG_LEVEL=debug
+    ports:
+      - "3001:3001"
+      - "9229:9229"  # Debug port
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+    profiles:
+      - dev
+
+  # Frontend en modo desarrollo
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://backend:3001
+    command: npm run dev
+    profiles:
+      - dev

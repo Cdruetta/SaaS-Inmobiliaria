@@ -175,15 +175,15 @@ const PropertyForm = () => {
             <label htmlFor="price" className="block text-sm font-medium text-gray-700">
               Precio
             </label>
-            <input
-              type="number"
-              name="price"
-              id="price"
-              value={formData.price}
-              onChange={handleChange}
-              required
-              min="0"
-              step="0.01"
+              <input
+                type="number"
+                name="price"
+                id="price"
+                value={formData.price}
+                onChange={handleChange}
+                required
+                min="0"
+                step="0.01"
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>

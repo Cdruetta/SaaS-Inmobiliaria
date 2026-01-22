@@ -64,9 +64,9 @@ class ClientService {
       const { query: clientQuery, params: clientParams } = this.queryBuilder.buildGetByIdQuery(id, agentId);
       const clientRow = this.db.get(clientQuery, clientParams);
 
-      if (!clientRow) {
-        throw new Error('Cliente no encontrado');
-      }
+    if (!clientRow) {
+      throw new Error('Cliente no encontrado');
+    }
 
       // Obtener transacciones
       const { query: transactionsQuery, params: transactionsParams } = this.queryBuilder.buildGetTransactionsQuery(id);
@@ -76,11 +76,11 @@ class ClientService {
       const client = this.formatter.formatClientRow(clientRow);
       const transactions = this.formatter.formatTransactions(transactionRows);
 
-      return {
+    return {
         ...client,
-        transactionCount: transactions.length,
+      transactionCount: transactions.length,
         transactions
-      };
+    };
     } catch (error) {
       console.error('Error in getClientById:', error);
       throw error;
@@ -157,9 +157,9 @@ class ClientService {
       const { query: checkQuery, params: checkParams } = this.queryBuilder.buildGetByIdQuery(id, agentId);
       const existingRow = this.db.get(checkQuery, checkParams);
 
-      if (!existingRow) {
-        throw new Error('Cliente no encontrado o no tienes permiso para modificarlo');
-      }
+    if (!existingRow) {
+      throw new Error('Cliente no encontrado o no tienes permiso para modificarlo');
+    }
 
       // Validar datos si se proporcionan
       if (clientData.email !== undefined) {
@@ -188,7 +188,7 @@ class ClientService {
 
       if (Object.keys(updates).length === 0) {
         return this.formatter.formatClientRow(existingRow);
-      }
+    }
 
       // Agregar timestamp de actualización
       updates.updatedAt = new Date().toISOString();
@@ -216,22 +216,22 @@ class ClientService {
       const { query: checkQuery, params: checkParams } = this.queryBuilder.buildGetByIdQuery(id, agentId);
       const client = this.db.get(checkQuery, checkParams);
 
-      if (!client) {
-        throw new Error('Cliente no encontrado o no tienes permiso para eliminarlo');
-      }
+    if (!client) {
+      throw new Error('Cliente no encontrado o no tienes permiso para eliminarlo');
+    }
 
       // Verificar que no tenga transacciones activas
       const { query: transactionsQuery, params: transactionsParams } = this.queryBuilder.buildCheckActiveTransactionsQuery(id);
       const { count: activeTransactionsCount } = this.db.get(transactionsQuery, transactionsParams);
 
-      if (activeTransactionsCount > 0) {
-        throw new Error('No se puede eliminar un cliente con transacciones activas');
-      }
+    if (activeTransactionsCount > 0) {
+      throw new Error('No se puede eliminar un cliente con transacciones activas');
+    }
 
       // Eliminar cliente
       this.db.run('DELETE FROM clients WHERE id = ?', [id]);
 
-      return { message: 'Cliente eliminado exitosamente' };
+    return { message: 'Cliente eliminado exitosamente' };
     } catch (error) {
       console.error('Error in deleteClient:', error);
       throw error;
@@ -267,4 +267,4 @@ class ClientService {
   }
 }
 
-module.exports = ClientService;
+module.exports = new ClientService();

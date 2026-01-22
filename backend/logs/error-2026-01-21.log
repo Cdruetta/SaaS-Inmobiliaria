@@ -1,0 +1,2 @@
+{"contentLength":"69","duration":"41ms","ip":"::ffff:127.0.0.1","level":"error","message":"HTTP Request","method":"DELETE","statusCode":500,"timestamp":"2026-01-21 15:42:18","url":"/api/clients/test-client-1769020938239","userId":"test-user-id"}
+{"level":"error","message":"Server Error Response","method":"DELETE","statusCode":500,"timestamp":"2026-01-21 15:42:18","url":"/api/clients/test-client-1769020938239","userId":"test-user-id"}

@@ -1,0 +1,50 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        cd backend && npm ci
+        cd ../frontend && npm ci
+
+    - name: Run tests and collect coverage
+      run: |
+        cd backend && npm run test:coverage
+        cd ../frontend && npm run test:coverage
+
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        projectBaseDir: .
+        args: >
+          -Dsonar.organization=tu-organizacion
+          -Dsonar.projectKey=tu-proyecto-saas-inmobiliaria
+          -Dsonar.sources=backend/src,frontend/src
+          -Dsonar.tests=backend/src/test,frontend/src/test
+          -Dsonar.test.inclusions=**/*.test.js,**/*.spec.js
+          -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info
+          -Dsonar.exclusions=**/node_modules/**,**/*.config.js,**/*.test.js,**/*.spec.js

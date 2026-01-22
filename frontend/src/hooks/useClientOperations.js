@@ -10,10 +10,10 @@ export const useClientOperations = () => {
   const [error, setError] = useState('');
 
   const createClient = async (clientData) => {
-    try {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError(''); // Limpiar error antes de la operación
 
+    try {
       const response = await api.post('/clients', clientData);
       return response.data;
     } catch (error) {
@@ -26,10 +26,10 @@ export const useClientOperations = () => {
   };
 
   const updateClient = async (id, clientData) => {
-    try {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError(''); // Limpiar error antes de la operación
 
+    try {
       const response = await api.put(`/clients/${id}`, clientData);
       return response.data;
     } catch (error) {
@@ -42,10 +42,10 @@ export const useClientOperations = () => {
   };
 
   const deleteClient = async (id) => {
-    try {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError(''); // Limpiar error antes de la operación
 
+    try {
       const response = await api.delete(`/clients/${id}`);
       return response.data;
     } catch (error) {

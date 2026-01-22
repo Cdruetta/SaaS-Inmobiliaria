@@ -1,0 +1,26 @@
+# ===========================================
+# SaaS Inmobiliaria - Frontend Dockerfile (Development)
+# ===========================================
+
+FROM node:18-alpine
+
+# Instalar dependencias del sistema
+RUN apk add --no-cache git
+
+# Establecer directorio de trabajo
+WORKDIR /app
+
+# Copiar archivos de configuración
+COPY package*.json ./
+
+# Instalar dependencias
+RUN npm install
+
+# Copiar código fuente
+COPY . .
+
+# Exponer puerto de desarrollo
+EXPOSE 5173
+
+# Comando por defecto
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

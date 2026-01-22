@@ -1,89 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+import { useDataManager } from './useDataManager';
 
 /**
- * Hook personalizado para manejar clientes
- * Aplica el principio de Responsabilidad Única (SRP)
+ * Hook especializado para manejar clientes
+ * Usa el hook genérico useDataManager aplicando el principio DRY
  */
 export const useClients = () => {
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 0
-  });
-  const [filters, setFilters] = useState({
-    search: ''
+  const dataManager = useDataManager({
+    endpoint: 'clients',
+    initialFilters: { search: '' },
+    initialPageSize: 10
   });
 
-  const fetchClients = useCallback(async (page = 1, searchFilter = '') => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.limit.toString(),
-      });
-
-      // Agregar filtros a los parámetros
-      if (searchFilter) {
-        params.append('search', searchFilter);
-      }
-
-      const response = await api.get(`/clients?${params}`);
-      setClients(response.data.clients || []);
-      setPagination(response.data.pagination || {
-        page: 1,
-        limit: 10,
-        total: 0,
-        pages: 0
-      });
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-      setError('Error al cargar los clientes');
-      setClients([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.limit]);
-
-  const updateFilters = useCallback((newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-  }, []);
-
-  const resetFilters = useCallback(() => {
-    setFilters({
-      search: ''
-    });
-  }, []);
-
-  // Efecto para cargar clientes al montar
-  useEffect(() => {
-    fetchClients(1, filters.search);
-  }, []); // Solo al montar
-
+  // Alias para mantener compatibilidad con la API existente
   return {
     // Estado
-    clients,
-    loading,
-    error,
-    pagination,
-    filters,
+    clients: dataManager.data,
+    loading: dataManager.loading,
+    error: dataManager.error,
+    pagination: dataManager.pagination,
+    filters: dataManager.filters,
 
     // Acciones
-    fetchClients,
-    updateFilters,
-    resetFilters,
+    fetchClients: dataManager.fetchData,
+    updateFilters: dataManager.updateFilters,
+    resetFilters: dataManager.resetFilters,
 
     // Utilidades
-    hasClients: clients.length > 0,
-    isLoading: loading,
-    hasError: error !== '',
-    hasNextPage: pagination.page < pagination.pages,
-    hasPrevPage: pagination.page > 1
+    hasClients: dataManager.hasData,
+    isLoading: dataManager.isLoading,
+    hasError: dataManager.hasError,
+    hasNextPage: dataManager.hasNextPage,
+    hasPrevPage: dataManager.hasPrevPage
   };
 };

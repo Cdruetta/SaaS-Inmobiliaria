@@ -1,0 +1,29 @@
+# ===========================================
+# SaaS Inmobiliaria - Backend Dockerfile (Development)
+# ===========================================
+
+FROM node:18-alpine
+
+# Instalar dependencias del sistema
+RUN apk add --no-cache sqlite curl
+
+# Establecer directorio de trabajo
+WORKDIR /app
+
+# Copiar archivos de configuración
+COPY package*.json ./
+
+# Instalar todas las dependencias
+RUN npm install
+
+# Copiar código fuente
+COPY . .
+
+# Generar cliente de Prisma
+RUN npx prisma generate
+
+# Exponer puerto y debug port
+EXPOSE 3001 9229
+
+# Comando por defecto
+CMD ["npm", "run", "dev"]

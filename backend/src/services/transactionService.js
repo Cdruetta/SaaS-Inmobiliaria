@@ -1,8 +1,15 @@
-const { PrismaClient } = require('@prisma/client');
+const SQLiteDatabase = require('../repositories/implementations/SQLiteDatabase');
+const TransactionValidator = require('./validation/TransactionValidator');
+const TransactionQueryBuilder = require('./queries/TransactionQueryBuilder');
+const TransactionFormatter = require('./formatters/TransactionFormatter');
 
 class TransactionService {
-  constructor() {
-    this.prisma = new PrismaClient();
+  constructor(database = null) {
+    // Dependency Injection - aplica DIP
+    this.db = database || new SQLiteDatabase();
+    this.validator = new TransactionValidator();
+    this.queryBuilder = new TransactionQueryBuilder();
+    this.formatter = new TransactionFormatter();
   }
 
   // Get all transactions with filters
@@ -301,43 +308,38 @@ class TransactionService {
   // Get transaction statistics
   async getTransactionStats(agentId = null) {
     try {
-      const where = agentId ? { agentId } : {};
+      // Consulta simple usando SQL directo
+      let whereClause = '';
+      let params = [];
 
-      const [totalTransactions, totalAmount, pendingTransactions] = await Promise.all([
-        this.prisma.transaction.count({ where }),
-        this.prisma.transaction.aggregate({
-          where,
-          _sum: {
-            amount: true,
-            commission: true
-          }
-        }),
-        this.prisma.transaction.count({
-          where: {
-            ...where,
-            status: 'PENDING'
-          }
-        })
-      ]);
+      if (agentId) {
+        whereClause = 'WHERE agentId = ?';
+        params = [agentId];
+      }
 
-      const totalCommission = totalAmount._sum.commission || 0;
-      const totalRevenue = totalAmount._sum.amount || 0;
+      // Total de transacciones
+      const totalResult = this.db.get(`SELECT COUNT(*) as count FROM transactions ${whereClause}`, params);
+      const totalTransactions = totalResult ? totalResult.count : 0;
 
-      return {
-        totalTransactions,
-        totalAmount: totalRevenue,
-        totalCommission,
-        pendingTransactions,
-        completedTransactions: totalTransactions - pendingTransactions
-      };
+      // Monto total
+      const amountResult = this.db.get(`SELECT SUM(amount) as sum FROM transactions ${whereClause}`, params);
+      const totalAmount = amountResult && amountResult.sum ? parseFloat(amountResult.sum) : 0;
+
+      // Agrupado por estado
+      const statusRows = this.db.all(`SELECT status, COUNT(*) as count FROM transactions ${whereClause} GROUP BY status`, params);
+
+      // Agrupado por tipo
+      const typeRows = this.db.all(`SELECT type, COUNT(*) as count FROM transactions ${whereClause} GROUP BY type`, params);
+
+      // Formatear respuesta
+      return this.formatter.formatStats(statusRows, typeRows, totalTransactions, totalAmount);
     } catch (error) {
       console.error('Error in getTransactionStats:', error);
       return {
         totalTransactions: 0,
         totalAmount: 0,
-        totalCommission: 0,
-        pendingTransactions: 0,
-        completedTransactions: 0
+        byStatus: {},
+        byType: {}
       };
     }
   }

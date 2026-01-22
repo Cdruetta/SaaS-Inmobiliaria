@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # Base de datos (SQLite - archivo persistente)
+  db:
+    image: alpine:latest
+    volumes:
+      - ./backend/data:/data
+    command: sh -c "mkdir -p /data && chmod 777 /data"
+    networks:
+      - saas-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: saas-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=file:/app/data/prod.db
+      - JWT_SECRET=${JWT_SECRET:-change-this-in-production}
+      - CORS_ORIGIN=http://frontend:80
+      - LOG_LEVEL=info
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/logs:/app/logs
+    depends_on:
+      - db
+    networks:
+      - saas-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: saas-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - saas-network
+    environment:
+      - REACT_APP_API_URL=http://backend:3001
+
+  # Proxy reverso (opcional para producción)
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: saas-proxy
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - saas-network
+    profiles:
+      - production
+
+  # Base de datos PostgreSQL (alternativa para producción)
+  postgres:
+    image: postgres:15-alpine
+    container_name: saas-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=saas_inmobiliaria
+      - POSTGRES_USER=saas_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change-this-in-production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - saas-network
+    profiles:
+      - postgres
+
+networks:
+  saas-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

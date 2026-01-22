@@ -10,10 +10,10 @@ export const usePropertyOperations = () => {
   const [error, setError] = useState('');
 
   const createProperty = async (propertyData) => {
-    try {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError(''); // Limpiar error antes de la operación
 
+    try {
       const response = await api.post('/properties', propertyData);
       return response.data;
     } catch (error) {
@@ -26,10 +26,10 @@ export const usePropertyOperations = () => {
   };
 
   const updateProperty = async (id, propertyData) => {
-    try {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError(''); // Limpiar error antes de la operación
 
+    try {
       const response = await api.put(`/properties/${id}`, propertyData);
       return response.data;
     } catch (error) {
@@ -42,10 +42,10 @@ export const usePropertyOperations = () => {
   };
 
   const deleteProperty = async (id) => {
-    try {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError(''); // Limpiar error antes de la operación
 
+    try {
       const response = await api.delete(`/properties/${id}`);
       return response.data;
     } catch (error) {

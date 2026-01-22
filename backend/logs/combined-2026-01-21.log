@@ -1,0 +1,16 @@
+{"contentLength":"53","duration":"37ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"GET","statusCode":401,"timestamp":"2026-01-21 15:40:50","url":"/api/clients"}
+{"contentLength":"53","duration":"9ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"GET","statusCode":401,"timestamp":"2026-01-21 15:40:50","url":"/api/clients"}
+{"contentLength":"53","duration":"7ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"GET","statusCode":401,"timestamp":"2026-01-21 15:40:51","url":"/api/clients?search=John"}
+{"contentLength":"53","duration":"4ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"GET","statusCode":401,"timestamp":"2026-01-21 15:40:51","url":"/api/clients?page=1&limit=2"}
+{"contentLength":"37","duration":"1ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"GET","statusCode":401,"timestamp":"2026-01-21 15:40:51","url":"/api/clients"}
+{"contentLength":"27","duration":"6ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"GET","statusCode":401,"timestamp":"2026-01-21 15:40:51","url":"/api/clients"}
+{"contentLength":"53","duration":"157ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"POST","statusCode":401,"timestamp":"2026-01-21 15:40:52","url":"/api/clients"}
+{"contentLength":"53","duration":"3ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"POST","statusCode":401,"timestamp":"2026-01-21 15:40:52","url":"/api/clients"}
+{"contentLength":"53","duration":"3ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"POST","statusCode":401,"timestamp":"2026-01-21 15:40:52","url":"/api/clients"}
+{"contentLength":"53","duration":"7ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"POST","statusCode":401,"timestamp":"2026-01-21 15:40:52","url":"/api/clients"}
+{"contentLength":"53","duration":"6ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"GET","statusCode":401,"timestamp":"2026-01-21 15:40:52","url":"/api/clients/test-client-1769020852208"}
+{"contentLength":"53","duration":"2ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"GET","statusCode":401,"timestamp":"2026-01-21 15:40:52","url":"/api/clients/non-existent-id"}
+{"contentLength":"53","duration":"8ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"PUT","statusCode":401,"timestamp":"2026-01-21 15:40:52","url":"/api/clients/test-client-1769020852407"}
+{"contentLength":"53","duration":"6ms","ip":"::ffff:127.0.0.1","level":"warn","message":"HTTP Request","method":"DELETE","statusCode":401,"timestamp":"2026-01-21 15:40:52","url":"/api/clients/test-client-1769020852572"}
+{"contentLength":"69","duration":"41ms","ip":"::ffff:127.0.0.1","level":"error","message":"HTTP Request","method":"DELETE","statusCode":500,"timestamp":"2026-01-21 15:42:18","url":"/api/clients/test-client-1769020938239","userId":"test-user-id"}
+{"level":"error","message":"Server Error Response","method":"DELETE","statusCode":500,"timestamp":"2026-01-21 15:42:18","url":"/api/clients/test-client-1769020938239","userId":"test-user-id"}

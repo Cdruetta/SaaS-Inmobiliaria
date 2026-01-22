@@ -1,0 +1,37 @@
+# ===========================================
+# SaaS Inmobiliaria - Backend Configuration
+# ===========================================
+# Copiar este archivo como .env y configurar los valores
+
+# ---------------------------------
+# SERVER CONFIGURATION
+# ---------------------------------
+PORT=3001
+NODE_ENV=development
+
+# ---------------------------------
+# DATABASE CONFIGURATION
+# ---------------------------------
+DATABASE_URL="file:./dev.db"
+
+# ---------------------------------
+# AUTHENTICATION & SECURITY
+# ---------------------------------
+# ¡IMPORTANTE! Generar una clave segura: openssl rand -base64 32
+JWT_SECRET="tu-clave-secreta-super-segura-cambiar-en-produccion"
+
+# ---------------------------------
+# CORS CONFIGURATION
+# ---------------------------------
+CORS_ORIGIN="http://localhost:5173"
+
+# ---------------------------------
+# LOGGING CONFIGURATION
+# ---------------------------------
+LOG_LEVEL=info
+
+# ---------------------------------
+# RATE LIMITING
+# ---------------------------------
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=1000
