@@ -7,6 +7,10 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
+// Test database connection before starting server
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 // Import logger
 const logger = require('./services/logger');
 
@@ -87,8 +91,37 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Test database connection and start server
+async function startServer() {
+  try {
+    console.log('Testing database connection...');
+    await prisma.$connect();
+    console.log('✅ Database connection successful');
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log('✅ All services initialized successfully');
+    });
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    console.error('❌ Server startup aborted');
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  await prisma.$disconnect();
+  process.exit(0);
 });
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+startServer();
 
 module.exports = app;
