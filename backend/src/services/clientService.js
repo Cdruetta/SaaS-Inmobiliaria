@@ -1,86 +1,86 @@
 const { PrismaClient } = require('@prisma/client');
 const ClientValidator = require('./validation/ClientValidator');
-const ClientQueryBuilder = require('./queries/ClientQueryBuilder');
-const ClientFormatter = require('./formatters/ClientFormatter');
+
+const prisma = new PrismaClient();
 
 class ClientService {
-  constructor(database = null) {
-    // Usar solo Prisma Client - más simple y directo
-    this.prisma = new PrismaClient();
+  constructor() {
+    this.prisma = prisma;
     this.validator = new ClientValidator();
-    this.queryBuilder = new ClientQueryBuilder();
-    this.formatter = new ClientFormatter();
   }
 
   // Get all clients with filters
   async getAllClients(filters = {}, agentId = null) {
     try {
-      const pagination = {
-        page: parseInt(filters.page) || 1,
-        limit: parseInt(filters.limit) || 10
-      };
+      const page = parseInt(filters.page) || 1;
+      const limit = parseInt(filters.limit) || 10;
+      const skip = (page - 1) * limit;
 
-      // Usar el query builder para construir la consulta
-      const { countQuery, dataQuery, params, countParams } = this.queryBuilder.buildGetAllQuery(
-        filters,
-        agentId,
-        pagination
-      );
+      // Construir where clause
+      const where = {};
+      if (agentId) {
+        where.agentId = agentId;
+      }
+
+      // Agregar filtros de búsqueda
+      if (filters.search) {
+        where.OR = [
+          { firstName: { contains: filters.search, mode: 'insensitive' } },
+          { lastName: { contains: filters.search, mode: 'insensitive' } },
+          { email: { contains: filters.search, mode: 'insensitive' } }
+        ];
+      }
 
       // Ejecutar consultas
-      const { total } = this.db.get(countQuery, countParams);
-      const rows = this.db.all(dataQuery, params);
-
-      // Formatear respuesta
-      const clients = this.formatter.formatClients(rows);
+      const [clients, total] = await Promise.all([
+        this.prisma.client.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' }
+        }),
+        this.prisma.client.count({ where })
+      ]);
 
       return {
         clients,
         pagination: {
-          page: pagination.page,
-          limit: pagination.limit,
+          page,
+          limit,
           total,
-          pages: Math.ceil(total / pagination.limit)
+          pages: Math.ceil(total / limit)
         }
       };
     } catch (error) {
       console.error('Error in getAllClients:', error);
-      return {
-        clients: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          pages: 0
-        }
-      };
+      throw error;
     }
   }
 
   // Get client by ID
   async getClientById(id, agentId = null) {
     try {
-      // Construir y ejecutar query de cliente
-      const { query: clientQuery, params: clientParams } = this.queryBuilder.buildGetByIdQuery(id, agentId);
-      const clientRow = this.db.get(clientQuery, clientParams);
+      const where = { id: parseInt(id) };
+      if (agentId) {
+        where.agentId = agentId;
+      }
 
-    if (!clientRow) {
-      throw new Error('Cliente no encontrado');
-    }
+      const client = await this.prisma.client.findFirst({
+        where,
+        include: {
+          transactions: true
+        }
+      });
 
-      // Obtener transacciones
-      const { query: transactionsQuery, params: transactionsParams } = this.queryBuilder.buildGetTransactionsQuery(id);
-      const transactionRows = this.db.all(transactionsQuery, transactionsParams);
+      if (!client) {
+        throw new Error('Cliente no encontrado');
+      }
 
-      // Formatear respuesta
-      const client = this.formatter.formatClientRow(clientRow);
-      const transactions = this.formatter.formatTransactions(transactionRows);
-
-    return {
+      return {
         ...client,
-      transactionCount: transactions.length,
-        transactions
-    };
+        transactionCount: client.transactions.length,
+        transactions: client.transactions
+      };
     } catch (error) {
       console.error('Error in getClientById:', error);
       throw error;
@@ -93,18 +93,21 @@ class ClientService {
       // Validar datos
       this.validator.validateCreate(clientData);
 
-      // Verificar que el agente existe en la base de datos
-      const userCheck = this.db.get('SELECT id FROM users WHERE id = ?', [agentId]);
-      if (!userCheck) {
-        throw new Error('El agente especificado no existe en la base de datos');
+      // Verificar que el agente existe
+      const agentExists = await this.prisma.user.findUnique({
+        where: { id: agentId }
+      });
+      if (!agentExists) {
+        throw new Error('El agente especificado no existe');
       }
 
       // Verificar si ya existe un cliente con ese email para este agente
-      const { query: checkQuery, params: checkParams } = this.queryBuilder.buildCheckExistingQuery(
-        clientData.email,
-        agentId
-      );
-      const existingClient = this.db.get(checkQuery, checkParams);
+      const existingClient = await this.prisma.client.findFirst({
+        where: {
+          email: clientData.email.toLowerCase().trim(),
+          agentId: agentId
+        }
+      });
 
       if (existingClient) {
         throw new Error('Ya existe un cliente con este email para este agente');
@@ -127,14 +130,6 @@ class ClientService {
         include: {
           agent: {
             select: { id: true, name: true, email: true }
-          },
-          transactions: {
-            select: { id: true },
-            where: {
-              status: {
-                in: ['PENDING', 'IN_PROGRESS', 'COMPLETED']
-              }
-            }
           }
         }
       });
