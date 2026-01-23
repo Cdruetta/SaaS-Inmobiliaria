@@ -144,7 +144,7 @@ class PropertyService {
       };
 
       // Crear propiedad con Prisma
-      const propertyData = {
+      const propertyToCreate = {
         id: propertyId,
         title: sanitizedData.title,
         description: sanitizedData.description,
@@ -165,7 +165,7 @@ class PropertyService {
       };
 
       const createdProperty = await this.prisma.property.create({
-        data: propertyData,
+        data: propertyToCreate,
         include: {
           owner: {
             select: { id: true, name: true, email: true }
