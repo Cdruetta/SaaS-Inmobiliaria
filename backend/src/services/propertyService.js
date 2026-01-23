@@ -153,16 +153,38 @@ class PropertyService {
         images: JSON.stringify(sanitizedData.images)
       };
 
-      // Crear propiedad
-      const { query, params } = this.queryBuilder.buildCreateQuery(propertyToInsert);
-      this.db.run(query, params);
+      // Crear propiedad con Prisma
+      const propertyData = {
+        id: propertyId,
+        title: sanitizedData.title,
+        description: sanitizedData.description,
+        type: sanitizedData.type,
+        status: sanitizedData.status,
+        price: sanitizedData.price,
+        address: sanitizedData.address,
+        city: sanitizedData.city,
+        state: sanitizedData.state,
+        zipCode: sanitizedData.zipCode,
+        bedrooms: sanitizedData.bedrooms,
+        bathrooms: sanitizedData.bathrooms,
+        area: sanitizedData.area,
+        yearBuilt: sanitizedData.yearBuilt,
+        features: sanitizedData.features,
+        images: sanitizedData.images,
+        ownerId: ownerId
+      };
 
-      // Obtener propiedad creada con información del owner
-      const { query: selectQuery, params: selectParams } = this.queryBuilder.buildGetByIdQuery(propertyId, null);
-      const row = this.db.get(selectQuery, selectParams);
+      const createdProperty = await this.prisma.property.create({
+        data: propertyData,
+        include: {
+          owner: {
+            select: { id: true, name: true, email: true }
+          }
+        }
+      });
 
       // Formatear respuesta
-      return this.formatter.formatPropertyRow({ ...row, transaction_count: 0 });
+      return this.formatter.formatPropertyRow({ ...createdProperty, transaction_count: 0 });
     } catch (error) {
       console.error('Error in createProperty:', error);
       throw error;
@@ -172,10 +194,14 @@ class PropertyService {
   async updateProperty(id, propertyData, userId) {
     try {
       // Verificar que la propiedad existe y el usuario tiene permisos
-      const { query: checkQuery, params: checkParams } = this.queryBuilder.buildGetByIdQuery(id, userId);
-      const existingRow = this.db.get(checkQuery, checkParams);
+      const existingProperty = await this.prisma.property.findFirst({
+        where: {
+          id: id,
+          ...(userId && { ownerId: userId })
+        }
+      });
 
-    if (!existingRow) {
+    if (!existingProperty) {
       throw new Error('Propiedad no encontrada o no tienes permiso para modificarla');
     }
 
@@ -218,21 +244,21 @@ class PropertyService {
       });
 
       if (Object.keys(updates).length === 0) {
-        return this.formatter.formatPropertyRow(existingRow);
+        return this.formatter.formatPropertyRow(existingProperty);
     }
 
-      // Agregar timestamp de actualización
-      updates.updatedAt = new Date().toISOString();
+      // Actualizar propiedad con Prisma
+      const updatedProperty = await this.prisma.property.update({
+        where: { id: id },
+        data: updates,
+        include: {
+          owner: {
+            select: { id: true, name: true, email: true }
+          }
+        }
+      });
 
-      // Actualizar propiedad
-      const { query: updateQuery, params: updateParams } = this.queryBuilder.buildUpdateQuery(id, updates);
-      this.db.run(updateQuery, updateParams);
-
-      // Obtener propiedad actualizada
-      const { query: selectQuery, params: selectParams } = this.queryBuilder.buildGetByIdQuery(id, null);
-      const updatedRow = this.db.get(selectQuery, selectParams);
-
-      return this.formatter.formatPropertyRow(updatedRow);
+      return this.formatter.formatPropertyRow(updatedProperty);
     } catch (error) {
       console.error('Error in updateProperty:', error);
       throw error;
@@ -250,25 +276,36 @@ class PropertyService {
       checkParams.push(userId);
     }
 
-    const property = this.db.prepare(checkQuery).get(...checkParams);
+    // Check if property exists and user has permission
+    const property = await this.prisma.property.findFirst({
+      where: {
+        id: id,
+        ...(userId && { ownerId: userId })
+      }
+    });
 
     if (!property) {
       throw new Error('Propiedad no encontrada o no tienes permiso para eliminarla');
     }
 
     // Check if property has active transactions
-    const activeTransactionsCount = this.db.prepare(`
-      SELECT COUNT(*) as count
-      FROM transactions
-      WHERE propertyId = ? AND status IN ('PENDING', 'IN_PROGRESS')
-    `).get(id).count;
+    const activeTransactionsCount = await this.prisma.transaction.count({
+      where: {
+        propertyId: id,
+        status: {
+          in: ['PENDING', 'IN_PROGRESS']
+        }
+      }
+    });
 
     if (activeTransactionsCount > 0) {
       throw new Error('No se puede eliminar una propiedad con transacciones activas');
     }
 
-    // Delete the property
-    this.db.prepare('DELETE FROM properties WHERE id = ?').run(id);
+    // Delete the property using Prisma
+    await this.prisma.property.delete({
+      where: { id: id }
+    });
 
     return { message: 'Propiedad eliminada exitosamente' };
   }

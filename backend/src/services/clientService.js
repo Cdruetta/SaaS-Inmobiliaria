@@ -110,34 +110,40 @@ class ClientService {
         throw new Error('Ya existe un cliente con este email para este agente');
       }
 
-      // Generar ID y timestamps
-      const { v4: uuidv4 } = require('uuid');
-      const now = new Date().toISOString();
-      const clientId = uuidv4();
-
       // Sanitizar datos
       const sanitizedData = this.validator.sanitize(clientData);
 
-      // Preparar datos para inserción
-      const clientToInsert = {
-        ...sanitizedData,
-        id: clientId,
-        agentId,
-        createdAt: now,
-        updatedAt: now,
-        preferences: sanitizedData.preferences ? JSON.stringify(sanitizedData.preferences) : null
-      };
-
-      // Crear cliente
-      const { query, params } = this.queryBuilder.buildCreateQuery(clientToInsert);
-      this.db.run(query, params);
-
-      // Obtener cliente creado con información del agente
-      const { query: selectQuery, params: selectParams } = this.queryBuilder.buildGetByIdQuery(clientId, null);
-      const row = this.db.get(selectQuery, selectParams);
+      // Crear cliente usando Prisma
+      const client = await this.prisma.client.create({
+        data: {
+          firstName: sanitizedData.firstName,
+          lastName: sanitizedData.lastName,
+          email: sanitizedData.email,
+          phone: sanitizedData.phone,
+          address: sanitizedData.address,
+          preferences: sanitizedData.preferences || null,
+          agentId: agentId
+        },
+        include: {
+          agent: {
+            select: { id: true, name: true, email: true }
+          },
+          transactions: {
+            select: { id: true },
+            where: {
+              status: {
+                in: ['PENDING', 'IN_PROGRESS', 'COMPLETED']
+              }
+            }
+          }
+        }
+      });
 
       // Formatear respuesta
-      return this.formatter.formatClientRow({ ...row, transaction_count: 0 });
+      return this.formatter.formatClientRow({
+        ...client,
+        transaction_count: client.transactions.length
+      });
     } catch (error) {
       console.error('Error creating client:', error);
       
@@ -154,12 +160,25 @@ class ClientService {
   async updateClient(id, clientData, agentId) {
     try {
       // Verificar que el cliente existe y el usuario tiene permisos
-      const { query: checkQuery, params: checkParams } = this.queryBuilder.buildGetByIdQuery(id, agentId);
-      const existingRow = this.db.get(checkQuery, checkParams);
+      const existingClient = await this.prisma.client.findFirst({
+        where: {
+          id: id,
+          ...(agentId && { agentId: agentId })
+        },
+        include: {
+          agent: { select: { id: true, name: true, email: true } },
+          transactions: {
+            select: { id: true },
+            where: {
+              status: { in: ['PENDING', 'IN_PROGRESS', 'COMPLETED'] }
+            }
+          }
+        }
+      });
 
-    if (!existingRow) {
-      throw new Error('Cliente no encontrado o no tienes permiso para modificarlo');
-    }
+      if (!existingClient) {
+        throw new Error('Cliente no encontrado o no tienes permiso para modificarlo');
+      }
 
       // Validar datos si se proporcionan
       if (clientData.email !== undefined) {
@@ -179,7 +198,7 @@ class ClientService {
           } else if (field === 'email') {
             updates[field] = clientData[field]?.toLowerCase().trim();
           } else if (field === 'preferences') {
-            updates[field] = clientData[field] ? JSON.stringify(clientData[field]) : null;
+            updates[field] = clientData[field] || null;
           } else {
             updates[field] = clientData[field];
           }
@@ -187,21 +206,32 @@ class ClientService {
       });
 
       if (Object.keys(updates).length === 0) {
-        return this.formatter.formatClientRow(existingRow);
-    }
+        return this.formatter.formatClientRow({
+          ...existingClient,
+          transaction_count: existingClient.transactions.length
+        });
+      }
 
-      // Agregar timestamp de actualización
-      updates.updatedAt = new Date().toISOString();
+      // Actualizar cliente usando Prisma
+      const updatedClient = await this.prisma.client.update({
+        where: { id: id },
+        data: updates,
+        include: {
+          agent: { select: { id: true, name: true, email: true } },
+          transactions: {
+            select: { id: true },
+            where: {
+              status: { in: ['PENDING', 'IN_PROGRESS', 'COMPLETED'] }
+            }
+          }
+        }
+      });
 
-      // Actualizar cliente
-      const { query: updateQuery, params: updateParams } = this.queryBuilder.buildUpdateQuery(id, updates);
-      this.db.run(updateQuery, updateParams);
-
-      // Obtener cliente actualizado
-      const { query: selectQuery, params: selectParams } = this.queryBuilder.buildGetByIdQuery(id, null);
-      const updatedRow = this.db.get(selectQuery, selectParams);
-
-      return this.formatter.formatClientRow(updatedRow);
+      // Formatear respuesta con cliente actualizado
+      return this.formatter.formatClientRow({
+        ...updatedClient,
+        transaction_count: updatedClient.transactions.length
+      });
     } catch (error) {
       console.error('Error in updateClient:', error);
       throw error;
@@ -213,25 +243,37 @@ class ClientService {
   async deleteClient(id, agentId) {
     try {
       // Verificar que el cliente existe y el usuario tiene permisos
-      const { query: checkQuery, params: checkParams } = this.queryBuilder.buildGetByIdQuery(id, agentId);
-      const client = this.db.get(checkQuery, checkParams);
+      const client = await this.prisma.client.findFirst({
+        where: {
+          id: id,
+          ...(agentId && { agentId: agentId })
+        },
+        include: {
+          transactions: {
+            where: {
+              status: {
+                in: ['PENDING', 'IN_PROGRESS', 'COMPLETED']
+              }
+            }
+          }
+        }
+      });
 
-    if (!client) {
-      throw new Error('Cliente no encontrado o no tienes permiso para eliminarlo');
-    }
+      if (!client) {
+        throw new Error('Cliente no encontrado o no tienes permiso para eliminarlo');
+      }
 
       // Verificar que no tenga transacciones activas
-      const { query: transactionsQuery, params: transactionsParams } = this.queryBuilder.buildCheckActiveTransactionsQuery(id);
-      const { count: activeTransactionsCount } = this.db.get(transactionsQuery, transactionsParams);
+      if (client.transactions.length > 0) {
+        throw new Error('No se puede eliminar un cliente con transacciones activas');
+      }
 
-    if (activeTransactionsCount > 0) {
-      throw new Error('No se puede eliminar un cliente con transacciones activas');
-    }
+      // Eliminar cliente usando Prisma
+      await this.prisma.client.delete({
+        where: { id: id }
+      });
 
-      // Eliminar cliente
-      this.db.run('DELETE FROM clients WHERE id = ?', [id]);
-
-    return { message: 'Cliente eliminado exitosamente' };
+      return { message: 'Cliente eliminado exitosamente' };
     } catch (error) {
       console.error('Error in deleteClient:', error);
       throw error;
@@ -241,11 +283,30 @@ class ClientService {
   // Get client statistics
   async getClientStats(agentId = null) {
     try {
-      const { queries, params } = this.queryBuilder.buildStatsQuery(agentId);
+      // Construir where clause
+      let whereClause = {};
+      if (agentId) {
+        whereClause.agentId = agentId;
+      }
 
-      // Ejecutar consultas
-      const totalClients = this.db.get(queries.totalClients, params).count;
-      const activeClients = this.db.get(queries.activeClients, params).count;
+      // Contar clientes totales
+      const totalClients = await this.prisma.client.count({
+        where: whereClause
+      });
+
+      // Contar clientes activos (que tienen transacciones)
+      const activeClients = await this.prisma.client.count({
+        where: {
+          ...whereClause,
+          transactions: {
+            some: {
+              status: {
+                in: ['PENDING', 'IN_PROGRESS', 'COMPLETED']
+              }
+            }
+          }
+        }
+      });
 
       // Formatear respuesta
       return this.formatter.formatStats(totalClients, activeClients);
