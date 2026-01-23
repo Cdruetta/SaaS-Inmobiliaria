@@ -130,20 +130,17 @@ class ClientService {
         include: {
           agent: {
             select: { id: true, name: true, email: true }
-          }
+          },
+          transactions: true
         }
       });
 
-      // Formatear respuesta
-      return {
-        ...client,
-        transactionCount: client.transactions.length
-      };
+      return client;
     } catch (error) {
       console.error('Error creating client:', error);
-      
-      // Mejorar mensajes de error
-      if (error.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
+
+      // Mejorar mensajes de error para PostgreSQL
+      if (error.code === 'P2003') {
         throw new Error('El agente especificado no existe en la base de datos');
       }
       
