@@ -125,9 +125,9 @@ class PropertyService {
       this.validator.validateCreate(propertyData);
 
       // Generar ID y timestamps
-    const { v4: uuidv4 } = require('uuid');
-    const now = new Date().toISOString();
-    const propertyId = uuidv4();
+      const crypto = require('crypto');
+      const now = new Date().toISOString();
+      const propertyId = crypto.randomUUID();
 
       // Sanitizar datos
       const sanitizedData = this.validator.sanitize(propertyData);
