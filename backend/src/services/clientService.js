@@ -135,10 +135,10 @@ class ClientService {
       });
 
       // Formatear respuesta
-      return this.formatter.formatClientRow({
+      return {
         ...client,
-        transaction_count: client.transactions.length
-      });
+        transactionCount: client.transactions.length
+      };
     } catch (error) {
       console.error('Error creating client:', error);
       
@@ -201,10 +201,10 @@ class ClientService {
       });
 
       if (Object.keys(updates).length === 0) {
-        return this.formatter.formatClientRow({
+        return {
           ...existingClient,
-          transaction_count: existingClient.transactions.length
-        });
+          transactionCount: existingClient.transactions.length
+        };
       }
 
       // Actualizar cliente usando Prisma
@@ -223,10 +223,10 @@ class ClientService {
       });
 
       // Formatear respuesta con cliente actualizado
-      return this.formatter.formatClientRow({
+      return {
         ...updatedClient,
-        transaction_count: updatedClient.transactions.length
-      });
+        transactionCount: updatedClient.transactions.length
+      };
     } catch (error) {
       console.error('Error in updateClient:', error);
       throw error;
@@ -304,7 +304,10 @@ class ClientService {
       });
 
       // Formatear respuesta
-      return this.formatter.formatStats(totalClients, activeClients);
+      return {
+        totalClients,
+        activeClients
+      };
     } catch (error) {
       console.error('Error in getClientStats:', error);
       return {
@@ -316,11 +319,6 @@ class ClientService {
   }
 
   // Close database connection
-  close() {
-    if (this.db) {
-      this.db.close();
-    }
-  }
 }
 
 module.exports = new ClientService();
