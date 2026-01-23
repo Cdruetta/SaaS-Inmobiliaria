@@ -1,15 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
 const TransactionValidator = require('./validation/TransactionValidator');
-const TransactionQueryBuilder = require('./queries/TransactionQueryBuilder');
-const TransactionFormatter = require('./formatters/TransactionFormatter');
+
+const prisma = new PrismaClient();
 
 class TransactionService {
-  constructor(database = null) {
-    // Usar solo Prisma Client - más simple y directo
-    this.prisma = new PrismaClient();
+  constructor() {
+    this.prisma = prisma;
     this.validator = new TransactionValidator();
-    this.queryBuilder = new TransactionQueryBuilder();
-    this.formatter = new TransactionFormatter();
   }
 
   // Get all transactions with filters
@@ -308,31 +305,41 @@ class TransactionService {
   // Get transaction statistics
   async getTransactionStats(agentId = null) {
     try {
-      // Consulta simple usando SQL directo
-      let whereClause = '';
-      let params = [];
+      const where = agentId ? { agentId } : {};
 
-      if (agentId) {
-        whereClause = 'WHERE agentId = ?';
-        params = [agentId];
-      }
+      // Ejecutar todas las consultas en paralelo
+      const [totalTransactions, totalAmountResult, statusStats, typeStats] = await Promise.all([
+        this.prisma.transaction.count({ where }),
+        this.prisma.transaction.aggregate({
+          where,
+          _sum: { amount: true }
+        }),
+        this.prisma.transaction.groupBy({
+          by: ['status'],
+          where,
+          _count: { status: true }
+        }),
+        this.prisma.transaction.groupBy({
+          by: ['type'],
+          where,
+          _count: { type: true }
+        })
+      ]);
 
-      // Total de transacciones
-      const totalResult = this.db.get(`SELECT COUNT(*) as count FROM transactions ${whereClause}`, params);
-      const totalTransactions = totalResult ? totalResult.count : 0;
+      const totalAmount = totalAmountResult._sum.amount || 0;
 
-      // Monto total
-      const amountResult = this.db.get(`SELECT SUM(amount) as sum FROM transactions ${whereClause}`, params);
-      const totalAmount = amountResult && amountResult.sum ? parseFloat(amountResult.sum) : 0;
-
-      // Agrupado por estado
-      const statusRows = this.db.all(`SELECT status, COUNT(*) as count FROM transactions ${whereClause} GROUP BY status`, params);
-
-      // Agrupado por tipo
-      const typeRows = this.db.all(`SELECT type, COUNT(*) as count FROM transactions ${whereClause} GROUP BY type`, params);
-
-      // Formatear respuesta
-      return this.formatter.formatStats(statusRows, typeRows, totalTransactions, totalAmount);
+      return {
+        totalTransactions,
+        totalAmount,
+        byStatus: statusStats.reduce((acc, s) => {
+          acc[s.status] = s._count.status;
+          return acc;
+        }, {}),
+        byType: typeStats.reduce((acc, t) => {
+          acc[t.type] = t._count.type;
+          return acc;
+        }, {})
+      };
     } catch (error) {
       console.error('Error in getTransactionStats:', error);
       return {
