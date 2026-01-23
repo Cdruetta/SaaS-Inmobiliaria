@@ -81,7 +81,7 @@ class PropertyService {
       // Usar Prisma para obtener propiedad con transacciones
       const propertyData = await this.prisma.property.findFirst({
         where: {
-          id: id,
+          id: parseInt(id),
           ...(userId && { ownerId: userId })
         },
         include: {
@@ -185,7 +185,7 @@ class PropertyService {
       // Verificar que la propiedad existe y el usuario tiene permisos
       const existingProperty = await this.prisma.property.findFirst({
         where: {
-          id: id,
+          id: parseInt(id),
           ...(userId && { ownerId: userId })
         }
       });
@@ -238,7 +238,7 @@ class PropertyService {
 
       // Actualizar propiedad con Prisma
       const updatedProperty = await this.prisma.property.update({
-        where: { id: id },
+        where: { id: parseInt(id) },
         data: updates,
         include: {
           owner: {
@@ -268,7 +268,7 @@ class PropertyService {
     // Check if property exists and user has permission
     const property = await this.prisma.property.findFirst({
       where: {
-        id: id,
+        id: parseInt(id),
         ...(userId && { ownerId: userId })
       }
     });
@@ -293,7 +293,7 @@ class PropertyService {
 
     // Delete the property using Prisma
     await this.prisma.property.delete({
-      where: { id: id }
+      where: { id: parseInt(id) }
     });
 
     return { message: 'Propiedad eliminada exitosamente' };

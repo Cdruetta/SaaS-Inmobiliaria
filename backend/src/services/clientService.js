@@ -154,7 +154,7 @@ class ClientService {
       // Verificar que el cliente existe y el usuario tiene permisos
       const existingClient = await this.prisma.client.findFirst({
         where: {
-          id: id,
+          id: parseInt(id),
           ...(agentId && { agentId: agentId })
         },
         include: {
@@ -206,7 +206,7 @@ class ClientService {
 
       // Actualizar cliente usando Prisma
       const updatedClient = await this.prisma.client.update({
-        where: { id: id },
+        where: { id: parseInt(id) },
         data: updates,
         include: {
           agent: { select: { id: true, name: true, email: true } },
@@ -237,7 +237,7 @@ class ClientService {
       // Verificar que el cliente existe y el usuario tiene permisos
       const client = await this.prisma.client.findFirst({
         where: {
-          id: id,
+          id: parseInt(id),
           ...(agentId && { agentId: agentId })
         },
         include: {
