@@ -1,15 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
 const PropertyValidator = require('./validation/PropertyValidator');
-const PropertyQueryBuilder = require('./queries/PropertyQueryBuilder');
-const PropertyFormatter = require('./formatters/PropertyFormatter');
+
+const prisma = new PrismaClient();
 
 class PropertyService {
-  constructor(database = null) {
-    // Usar solo Prisma Client - más simple y directo
-    this.prisma = new PrismaClient();
+  constructor() {
+    this.prisma = prisma;
     this.validator = new PropertyValidator();
-    this.queryBuilder = new PropertyQueryBuilder();
-    this.formatter = new PropertyFormatter();
   }
 
   async getAllProperties(filters = {}, userId = null) {
@@ -64,18 +61,15 @@ class PropertyService {
         })
       ]);
 
-      // Formatear respuesta
-      const properties = this.formatter.formatProperties(propertiesData);
-
-    return {
-        properties,
-      pagination: {
+      return {
+        properties: propertiesData,
+        pagination: {
           page: pagination.page,
           limit: pagination.limit,
-        total,
+          total,
           pages: Math.ceil(total / pagination.limit)
-      }
-    };
+        }
+      };
     } catch (error) {
       console.error('Error in getAllProperties:', error);
       throw error;
@@ -114,15 +108,11 @@ class PropertyService {
 
       // Los datos ya incluyen transacciones
 
-      // Formatear respuesta
-      const property = this.formatter.formatPropertyRow(propertyData);
-      const transactions = this.formatter.formatTransactions(propertyData.transactions);
-
-    return {
-        ...property,
-      transactionCount: transactions.length,
-        transactions
-    };
+      return {
+        ...propertyData,
+        transactionCount: propertyData.transactions.length,
+        transactions: propertyData.transactions
+      };
     } catch (error) {
       console.error('Error in getPropertyById:', error);
       throw error;
@@ -183,8 +173,7 @@ class PropertyService {
         }
       });
 
-      // Formatear respuesta
-      return this.formatter.formatPropertyRow({ ...createdProperty, transaction_count: 0 });
+      return createdProperty;
     } catch (error) {
       console.error('Error in createProperty:', error);
       throw error;
@@ -244,8 +233,8 @@ class PropertyService {
       });
 
       if (Object.keys(updates).length === 0) {
-        return this.formatter.formatPropertyRow(existingProperty);
-    }
+        return existingProperty;
+      }
 
       // Actualizar propiedad con Prisma
       const updatedProperty = await this.prisma.property.update({
@@ -258,7 +247,7 @@ class PropertyService {
         }
       });
 
-      return this.formatter.formatPropertyRow(updatedProperty);
+      return updatedProperty;
     } catch (error) {
       console.error('Error in updateProperty:', error);
       throw error;
@@ -338,13 +327,18 @@ class PropertyService {
 
       const totalValue = totalValueResult._sum.price || 0;
 
-      // Formatear respuesta
-      return this.formatter.formatStats(
-        statusStats.map(s => ({ status: s.status, count: s._count.status })),
-        typeStats.map(t => ({ type: t.type, count: t._count.type })),
+      return {
         totalProperties,
-        totalValue
-      );
+        totalValue,
+        byStatus: statusStats.reduce((acc, s) => {
+          acc[s.status] = s._count.status;
+          return acc;
+        }, {}),
+        byType: typeStats.reduce((acc, t) => {
+          acc[t.type] = t._count.type;
+          return acc;
+        }, {})
+      };
     } catch (error) {
       console.error('Error in getPropertyStats:', error);
       return {
