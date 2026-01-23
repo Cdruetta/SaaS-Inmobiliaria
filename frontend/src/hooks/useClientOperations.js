@@ -14,7 +14,7 @@ export const useClientOperations = () => {
     setError(''); // Limpiar error antes de la operación
 
     try {
-      const response = await api.post('/clients', clientData);
+      const response = await api.post('/api/clients', clientData);
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Error al crear el cliente';
@@ -30,7 +30,7 @@ export const useClientOperations = () => {
     setError(''); // Limpiar error antes de la operación
 
     try {
-      const response = await api.put(`/clients/${id}`, clientData);
+      const response = await api.put(`/api/clients/${id}`, clientData);
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Error al actualizar el cliente';
@@ -46,7 +46,7 @@ export const useClientOperations = () => {
     setError(''); // Limpiar error antes de la operación
 
     try {
-      const response = await api.delete(`/clients/${id}`);
+      const response = await api.delete(`/api/clients/${id}`);
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Error al eliminar el cliente';

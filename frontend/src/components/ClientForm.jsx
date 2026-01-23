@@ -24,7 +24,7 @@ const ClientForm = ({ clientId, onSuccess, onCancel }) => {
   const loadClient = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/clients/${clientId}`);
+      const response = await api.get(`/api/clients/${clientId}`);
       const client = response.data.client;
 
       // Guardar datos originales para comparación
@@ -99,10 +99,10 @@ const ClientForm = ({ clientId, onSuccess, onCancel }) => {
         }
 
         console.log('Campos que se van a actualizar:', changedFields);
-        response = await api.put(`/clients/${clientId}`, changedFields);
+        response = await api.put(`/api/clients/${clientId}`, changedFields);
       } else {
         // Crear nuevo cliente - enviar todos los campos
-        response = await api.post('/clients', {
+        response = await api.post('/api/clients', {
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
           email: formData.email.trim(),

@@ -33,7 +33,7 @@ const TransactionForm = () => {
 
   const fetchProperties = async () => {
     try {
-      const response = await api.get('/properties?limit=100');
+      const response = await api.get('/api/properties?limit=100');
       setProperties(response.data.properties || []);
     } catch (error) {
       console.error('Error fetching properties:', error);
@@ -42,7 +42,7 @@ const TransactionForm = () => {
 
   const fetchClients = async () => {
     try {
-      const response = await api.get('/clients?limit=100');
+      const response = await api.get('/api/clients?limit=100');
       setClients(response.data.clients || []);
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -52,7 +52,7 @@ const TransactionForm = () => {
   const fetchTransaction = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/transactions/${id}`);
+      const response = await api.get(`/api/transactions/${id}`);
       const transaction = response.data.transaction;
 
       setFormData({
@@ -117,9 +117,9 @@ const TransactionForm = () => {
       };
 
       if (isEditing) {
-        await api.put(`/transactions/${id}`, submitData);
+        await api.put(`/api/transactions/${id}`, submitData);
       } else {
-        await api.post('/transactions', submitData);
+        await api.post('/api/transactions', submitData);
       }
 
       navigate('/transactions');

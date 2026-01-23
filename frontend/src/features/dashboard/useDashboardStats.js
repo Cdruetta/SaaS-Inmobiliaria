@@ -21,7 +21,7 @@ export const useDashboardStats = () => {
         setLoading(true);
         setError('');
 
-        const response = await api.get('/dashboard/stats');
+        const response = await api.get('/api/dashboard/stats');
         console.log('Dashboard stats response:', response.data); 
 
         setStats(response.data.stats);

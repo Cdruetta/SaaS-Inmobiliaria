@@ -44,7 +44,7 @@ const PropertyForm = () => {
       const fetchProperty = async () => {
         setLoading(true);
         try {
-          const response = await api.get(`/properties/${id}`);
+          const response = await api.get(`/api/properties/${id}`);
           const property = response.data.property;
           setFormData({
             title: property.title || '',
@@ -86,10 +86,10 @@ const PropertyForm = () => {
 
     try {
       if (isEditing) {
-        await api.put(`/properties/${id}`, formData);
+        await api.put(`/api/properties/${id}`, formData);
         toast.success('Propiedad actualizada exitosamente!');
       } else {
-        await api.post('/properties', formData);
+        await api.post('/api/properties', formData);
         toast.success('Propiedad creada exitosamente!');
       }
       navigate('/properties');

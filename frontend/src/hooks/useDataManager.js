@@ -56,7 +56,7 @@ export const useDataManager = ({
         }
       });
 
-      const response = await api.get(`/${endpoint}?${params}`);
+      const response = await api.get(`/api/${endpoint}?${params}`);
 
       setData(response.data[endpoint] || response.data.clients || response.data.properties || []);
       setPagination(response.data.pagination || {
@@ -90,7 +90,7 @@ export const useDataManager = ({
     setOperationError('');
 
     try {
-      const response = await api.post(`/${endpoint}`, itemData);
+      const response = await api.post(`/api/${endpoint}`, itemData);
       // Refetch data to include the new item
       await fetchData(pagination.page);
       return response.data;
@@ -108,7 +108,7 @@ export const useDataManager = ({
     setOperationError('');
 
     try {
-      const response = await api.put(`/${endpoint}/${id}`, itemData);
+      const response = await api.put(`/api/${endpoint}/${id}`, itemData);
       // Update local data
       setData(prev => prev.map(item => item.id === id ? { ...item, ...itemData } : item));
       return response.data;
@@ -126,7 +126,7 @@ export const useDataManager = ({
     setOperationError('');
 
     try {
-      const response = await api.delete(`/${endpoint}/${id}`);
+      const response = await api.delete(`/api/${endpoint}/${id}`);
       // Remove from local data
       setData(prev => prev.filter(item => item.id !== id));
       // Adjust pagination if necessary

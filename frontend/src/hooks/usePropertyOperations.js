@@ -14,7 +14,7 @@ export const usePropertyOperations = () => {
     setError(''); // Limpiar error antes de la operación
 
     try {
-      const response = await api.post('/properties', propertyData);
+      const response = await api.post('/api/properties', propertyData);
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Error al crear la propiedad';
@@ -30,7 +30,7 @@ export const usePropertyOperations = () => {
     setError(''); // Limpiar error antes de la operación
 
     try {
-      const response = await api.put(`/properties/${id}`, propertyData);
+      const response = await api.put(`/api/properties/${id}`, propertyData);
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Error al actualizar la propiedad';
@@ -46,7 +46,7 @@ export const usePropertyOperations = () => {
     setError(''); // Limpiar error antes de la operación
 
     try {
-      const response = await api.delete(`/properties/${id}`);
+      const response = await api.delete(`/api/properties/${id}`);
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Error al eliminar la propiedad';

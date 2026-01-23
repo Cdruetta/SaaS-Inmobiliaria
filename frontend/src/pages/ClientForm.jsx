@@ -29,7 +29,7 @@ const ClientForm = () => {
   const fetchClient = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/clients/${id}`);
+      const response = await api.get(`/api/clients/${id}`);
       const client = response.data.client;
 
       setFormData({
@@ -90,9 +90,9 @@ const ClientForm = () => {
     try {
       let response;
       if (isEditing) {
-        response = await api.put(`/clients/${id}`, formData);
+        response = await api.put(`/api/clients/${id}`, formData);
       } else {
-        response = await api.post('/clients', formData);
+        response = await api.post('/api/clients', formData);
       }
 
       // Redirigir a la lista de clientes usando React Router
