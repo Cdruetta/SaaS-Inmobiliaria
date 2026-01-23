@@ -2,14 +2,14 @@
 # SaaS Inmobiliaria - Backend Dockerfile
 # ===========================================
 
-# Usar Node.js LTS
-FROM node:18-alpine
+# Usar Node.js LTS con Debian (compatible con Prisma)
+FROM node:18-slim
 
 # Establecer directorio de trabajo
 WORKDIR /app
 
 # Instalar dependencias del sistema para PostgreSQL
-RUN apk add --no-cache postgresql-client
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
 
 # Copiar archivos de configuración de dependencias
 COPY package*.json ./
