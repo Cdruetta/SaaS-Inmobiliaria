@@ -1,7 +1,5 @@
 const request = require('supertest')
 const app = require('../../server')
-const Database = require('better-sqlite3')
-const path = require('path')
 
 // Mock del middleware de autenticación para tests
 jest.mock('../../middlewares/auth', () => ({

@@ -1,12 +1,12 @@
-const SQLiteDatabase = require('../repositories/implementations/SQLiteDatabase');
+const { PrismaClient } = require('@prisma/client');
 const TransactionValidator = require('./validation/TransactionValidator');
 const TransactionQueryBuilder = require('./queries/TransactionQueryBuilder');
 const TransactionFormatter = require('./formatters/TransactionFormatter');
 
 class TransactionService {
   constructor(database = null) {
-    // Dependency Injection - aplica DIP
-    this.db = database || new SQLiteDatabase();
+    // Usar solo Prisma Client - más simple y directo
+    this.prisma = new PrismaClient();
     this.validator = new TransactionValidator();
     this.queryBuilder = new TransactionQueryBuilder();
     this.formatter = new TransactionFormatter();

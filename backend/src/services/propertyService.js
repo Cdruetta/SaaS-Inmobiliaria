@@ -1,12 +1,12 @@
-const SQLiteDatabase = require('../repositories/implementations/SQLiteDatabase');
+const { PrismaClient } = require('@prisma/client');
 const PropertyValidator = require('./validation/PropertyValidator');
 const PropertyQueryBuilder = require('./queries/PropertyQueryBuilder');
 const PropertyFormatter = require('./formatters/PropertyFormatter');
 
 class PropertyService {
   constructor(database = null) {
-    // Dependency Injection - aplica DIP
-    this.db = database || new SQLiteDatabase();
+    // Usar solo Prisma Client - más simple y directo
+    this.prisma = new PrismaClient();
     this.validator = new PropertyValidator();
     this.queryBuilder = new PropertyQueryBuilder();
     this.formatter = new PropertyFormatter();
@@ -19,19 +19,53 @@ class PropertyService {
         limit: parseInt(filters.limit) || 10
       };
 
-      // Usar el query builder para construir la consulta
-      const { countQuery, dataQuery, params, countParams } = this.queryBuilder.buildGetAllQuery(
-        filters,
-        userId,
-        pagination
-      );
+      // Construir where clause con Prisma
+      let whereClause = {};
+      if (userId) {
+        whereClause.ownerId = userId;
+      }
 
-      // Ejecutar consultas
-      const { total } = this.db.get(countQuery, countParams);
-      const rows = this.db.all(dataQuery, params);
+      // Aplicar filtros
+      if (filters.search) {
+        whereClause.OR = [
+          { title: { contains: filters.search, mode: 'insensitive' } },
+          { address: { contains: filters.search, mode: 'insensitive' } },
+          { city: { contains: filters.search, mode: 'insensitive' } }
+        ];
+      }
+
+      if (filters.type) {
+        whereClause.type = filters.type;
+      }
+
+      if (filters.status) {
+        whereClause.status = filters.status;
+      }
+
+      if (filters.minPrice || filters.maxPrice) {
+        whereClause.price = {};
+        if (filters.minPrice) whereClause.price.gte = parseFloat(filters.minPrice);
+        if (filters.maxPrice) whereClause.price.lte = parseFloat(filters.maxPrice);
+      }
+
+      // Ejecutar consultas con Prisma
+      const [total, propertiesData] = await Promise.all([
+        this.prisma.property.count({ where: whereClause }),
+        this.prisma.property.findMany({
+          where: whereClause,
+          include: {
+            owner: {
+              select: { id: true, name: true, email: true }
+            }
+          },
+          skip: (pagination.page - 1) * pagination.limit,
+          take: pagination.limit,
+          orderBy: { createdAt: 'desc' }
+        })
+      ]);
 
       // Formatear respuesta
-      const properties = this.formatter.formatProperties(rows);
+      const properties = this.formatter.formatProperties(propertiesData);
 
     return {
         properties,
@@ -50,21 +84,39 @@ class PropertyService {
 
   async getPropertyById(id, userId = null) {
     try {
-      // Construir y ejecutar query de propiedad
-      const { query: propertyQuery, params: propertyParams } = this.queryBuilder.buildGetByIdQuery(id, userId);
-      const propertyRow = this.db.get(propertyQuery, propertyParams);
+      // Usar Prisma para obtener propiedad con transacciones
+      const propertyData = await this.prisma.property.findFirst({
+        where: {
+          id: id,
+          ...(userId && { ownerId: userId })
+        },
+        include: {
+          owner: {
+            select: { id: true, name: true, email: true }
+          },
+          transactions: {
+            include: {
+              client: {
+                select: { id: true, firstName: true, lastName: true }
+              },
+              agent: {
+                select: { id: true, name: true, email: true }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      });
 
-    if (!propertyRow) {
+    if (!propertyData) {
       throw new Error('Propiedad no encontrada');
     }
 
-      // Obtener transacciones
-      const { query: transactionsQuery, params: transactionsParams } = this.queryBuilder.buildGetTransactionsQuery(id);
-      const transactionRows = this.db.all(transactionsQuery, transactionsParams);
+      // Los datos ya incluyen transacciones
 
       // Formatear respuesta
-      const property = this.formatter.formatPropertyRow(propertyRow);
-      const transactions = this.formatter.formatTransactions(transactionRows);
+      const property = this.formatter.formatPropertyRow(propertyData);
+      const transactions = this.formatter.formatTransactions(propertyData.transactions);
 
     return {
         ...property,
@@ -223,17 +275,39 @@ class PropertyService {
 
   async getPropertyStats(userId = null) {
     try {
-      const { queries, params } = this.queryBuilder.buildStatsQuery(userId);
+      let whereClause = {};
+      if (userId) {
+        whereClause.ownerId = userId;
+      }
 
-      // Ejecutar consultas
-      const totalProperties = this.db.get(queries.totalProperties, params).count;
-      const totalValueResult = this.db.get(queries.totalValue, params);
-      const totalValue = totalValueResult.sum || 0;
-      const statusRows = this.db.all(queries.byStatus, params);
-      const typeRows = this.db.all(queries.byType, params);
+      // Usar Prisma para estadísticas
+      const [totalProperties, totalValueResult, statusStats, typeStats] = await Promise.all([
+        this.prisma.property.count({ where: whereClause }),
+        this.prisma.property.aggregate({
+          where: whereClause,
+          _sum: { price: true }
+        }),
+        this.prisma.property.groupBy({
+          by: ['status'],
+          where: whereClause,
+          _count: { status: true }
+        }),
+        this.prisma.property.groupBy({
+          by: ['type'],
+          where: whereClause,
+          _count: { type: true }
+        })
+      ]);
+
+      const totalValue = totalValueResult._sum.price || 0;
 
       // Formatear respuesta
-      return this.formatter.formatStats(statusRows, typeRows, totalProperties, totalValue);
+      return this.formatter.formatStats(
+        statusStats.map(s => ({ status: s.status, count: s._count.status })),
+        typeStats.map(t => ({ type: t.type, count: t._count.type })),
+        totalProperties,
+        totalValue
+      );
     } catch (error) {
       console.error('Error in getPropertyStats:', error);
       return {
@@ -246,12 +320,8 @@ class PropertyService {
   }
 
   // Close database connection
-  close() {
-    // better-sqlite3 closes automatically when the process ends
-    // but we can explicitly close if needed
-    if (this.db) {
-      this.db.close();
-    }
+  async close() {
+    await this.prisma.$disconnect();
   }
 }
 
