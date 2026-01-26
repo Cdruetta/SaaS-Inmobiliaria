@@ -53,7 +53,7 @@ jobs:
         npm run test:run
 
     - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         directory: ./coverage
         flags: backend
